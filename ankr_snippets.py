@@ -3,6 +3,9 @@ from web3 import Web3, HTTPProvider
 from pprint import pprint
 import sqlite3
 from sqlite3 import Error
+from eth_abi import decode
+
+erc20_padding = 10 ** 18
 
 
 def create_connection(db_file):
@@ -59,24 +62,28 @@ def write_txn(conn):
     block = web3.eth.get_block(block_identifier=BlockNumber(19089948), full_transactions=True)
     transactions = block['transactions']
     example = transactions[151]
-    print(f"input data: {(example['input'], 0)}")
+    input_data = example['input']
+    print(f"input data: {(input_data, 0)}")
+    # eth_utils.decode_hex(input)
+    recipient, value = decode(['address', 'uint256'], input_data[4:])
+    print(f'{recipient}, {value / 10 ** 18}')
 
     # block_number, transaction_index, sender, recipient, token_id, value, timestamp
-    txn = (block['number'], example['transactionIndex'], example['from'], 'recipient_test', example['to'], 123,
-           block['timestamp'])
+    txn = (block['number'], example['transactionIndex'], example['from'], recipient, example['to'],
+           value / erc20_padding, block['timestamp'])
     print(f'txn to write: {txn}')
     insert_txn(conn, txn)
     # pprint(web3.to_json(example))
-    # pprint(block)
     print('finished write_txn')
+
 
 def insert_txn(conn, txn):
     """
     Insert a new txn row into the table.
     """
 
-    sql = ''' INSERT INTO transactions(block_number, transaction_index, sender, recipient, token_id, value, timestamp)
-              VALUES(?,?,?,?,?,?,?) '''
+    sql = '''INSERT OR REPLACE INTO transactions(block_number, transaction_index, sender, recipient, token_id, value, 
+    timestamp) VALUES(?,?,?,?,?,?,?)'''
     cur = conn.cursor()
     cur.execute(sql, txn)
     conn.commit()
