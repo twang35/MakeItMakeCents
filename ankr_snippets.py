@@ -28,7 +28,7 @@ def create_txn_table(conn):
                                             sender TEXT NOT NULL,
                                             recipient TEXT NOT NULL,
                                             token_id TEXT NOT NULL,
-                                            value INTEGER NOT NULL,
+                                            value REAL NOT NULL,
                                             timestamp INTEGER NOT NULL,
                                             PRIMARY KEY (recipient, token_id, block_number, transaction_index)
                                         ); """
@@ -64,6 +64,7 @@ def write_txn(conn):
     example = transactions[151]
     input_data = example['input']
     print(f"input data: {(input_data, 0)}")
+
     # eth_utils.decode_hex(input)
     recipient, value = decode(['address', 'uint256'], input_data[4:])
     print(f'{recipient}, {value / 10 ** 18}')
@@ -79,7 +80,7 @@ def write_txn(conn):
 
 def insert_txn(conn, txn):
     """
-    Insert a new txn row into the table.
+    Insert or replace a new txn row into the table.
     """
 
     sql = '''INSERT OR REPLACE INTO transactions(block_number, transaction_index, sender, recipient, token_id, value, 
