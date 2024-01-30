@@ -1,58 +1,12 @@
 from eth_typing import BlockNumber
 from web3 import Web3, HTTPProvider
 from pprint import pprint
-import sqlite3
-from sqlite3 import Error
 from eth_abi import decode
+from database import *
 
 erc20_padding = 10 ** 18
-
-
-def create_connection(db_file):
-    """ create a database connection to a SQLite database """
-    conn = None
-    try:
-        conn = sqlite3.connect(db_file)
-        print(sqlite3.version)
-    except Error as e:
-        print(e)
-
-    return conn
-
-
-def create_txn_table(conn):
-    # block_number, transaction_index, sender, recipient, token_id, value, timestamp
-    sql_create_transactions_table = """ CREATE TABLE IF NOT EXISTS transactions (
-                                            block_number INTEGER NOT NULL,
-                                            transaction_index INTEGER NOT NULL,
-                                            sender TEXT NOT NULL,
-                                            recipient TEXT NOT NULL,
-                                            token_id TEXT NOT NULL,
-                                            value REAL NOT NULL,
-                                            timestamp INTEGER NOT NULL,
-                                            PRIMARY KEY (recipient, token_id, block_number, transaction_index)
-                                        ); """
-
-    # create tables
-    if conn is not None:
-        # create projects table
-        try:
-            c = conn.cursor()
-            c.execute(sql_create_transactions_table)
-        except Error as e:
-            print(e)
-    else:
-        print("Error! cannot create the database connection.")
-
-
-def test_block_number():
-    url = 'https://rpc.ankr.com/eth'  # url string
-
-    web3 = Web3(HTTPProvider(url))
-    block = web3.eth.get_block(block_identifier=BlockNumber(19089948), full_transactions=True)
-    # pprint(block['transactions'])
-    pprint(block)
-    print('finished test_block_number')
+# Web3.utils.keccak256("Transfer(address,address,uint256)")
+transfer_function_hash = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
 
 
 def write_txn(conn):
@@ -67,32 +21,34 @@ def write_txn(conn):
 
     # eth_utils.decode_hex(input)
     recipient, value = decode(['address', 'uint256'], input_data[4:])
-    print(f'{recipient}, {value / 10 ** 18}')
+    print(f'OG sender: {example["from"]}, recipient: {recipient}, value: {value / 10 ** 18}')
+
+    matching_logs = web3.eth.get_logs({
+        'fromBlock': 19089948,
+        'toBlock': 19089948,
+        'topics': [transfer_function_hash],
+        'address': '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB',  # AltLayer Token (ALT)
+    })
+    print(matching_logs)
+
+    q = attach_queue()
+    q.put(19089948)
+    q.put(19089949)
+    q.put(19089950)
+    # item = q.get(timeout=1)
+    # print(f'queue item: {item}')
+    # q.ack(item)
+
+
 
     # block_number, transaction_index, sender, recipient, token_id, value, timestamp
     txn = (block['number'], example['transactionIndex'], example['from'], recipient, example['to'],
            value / erc20_padding, block['timestamp'])
     print(f'txn to write: {txn}')
-    insert_txn(conn, txn)
+    # insert_txn(conn, txn)
     # pprint(web3.to_json(example))
     print('finished write_txn')
 
 
-def insert_txn(conn, txn):
-    """
-    Insert or replace a new txn row into the table.
-    """
-
-    sql = '''INSERT OR REPLACE INTO transactions(block_number, transaction_index, sender, recipient, token_id, value, 
-    timestamp) VALUES(?,?,?,?,?,?,?)'''
-    cur = conn.cursor()
-    cur.execute(sql, txn)
-    conn.commit()
-    return cur.lastrowid
-
-
-database = r"/Users/tonywang/projects/stonks/test.db"
-conn = create_connection(database)
-# test_block_number()
-create_txn_table(conn)
+conn = create_connection()
 write_txn(conn)
