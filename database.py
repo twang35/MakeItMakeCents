@@ -61,7 +61,7 @@ def insert_txn(conn, txn):
 
 
 def attach_queue():
-    return persistqueue.UniqueAckQ(queue_path)
+    return persistqueue.UniqueAckQ(path=queue_path)
 
 
 conn = create_connection()

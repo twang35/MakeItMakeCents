@@ -9,7 +9,12 @@ erc20_padding = 10 ** 18
 transfer_function_hash = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
 
 
-def write_txn(conn):
+def main():
+    add_blocks_for_processing(start=19089948, end=19089950)
+    write_txn()
+
+
+def write_txn():
     url = 'https://rpc.ankr.com/eth'  # url string
 
     web3 = Web3(HTTPProvider(url))
@@ -32,10 +37,11 @@ def write_txn(conn):
     print(matching_logs)
 
     q = attach_queue()
-    q.put(19089948)
-    q.put(19089949)
-    q.put(19089950)
-    # item = q.get(timeout=1)
+
+    while q.qsize() > 0:
+        item = q.get()
+        print(item)
+        q.ack(item)
     # print(f'queue item: {item}')
     # q.ack(item)
 
@@ -50,5 +56,16 @@ def write_txn(conn):
     print('finished write_txn')
 
 
-conn = create_connection()
-write_txn(conn)
+def add_blocks_for_processing(start, end):
+    q = attach_queue()
+    q.clear_acked_data(keep_latest=0)
+    i = start
+
+    while i <= end:
+        q.put(i)
+        i += 1
+
+    print(f'added blocks from {start} to {end} for processing')
+
+
+main()
