@@ -9,12 +9,21 @@ erc20_padding = 10 ** 18
 ankr_endpoint = 'https://rpc.ankr.com/eth'  # url string
 # Web3.utils.keccak256("Transfer(address,address,uint256)")
 transfer_function_hash = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
-target_recipient = '0xD7acDd917Df3AB3349eb6377fDf519Fd44B42d44'
 
 
 def main():
-    add_blocks_for_processing(start=19089948, end=19089950)
+    only_print_queue()
+    add_blocks_for_processing(start=19082604, end=19082620)
     process_blocks()
+
+
+def only_print_queue():
+    q = attach_queue()
+    print(f'queue size: {q.qsize()}')
+    full_data = q.queue()
+    values = [element['data'] for element in full_data]
+    pprint(values)
+    exit()
 
 
 def process_blocks():
@@ -42,10 +51,7 @@ def process_block(block):
 
     # parse topics and only process target address
     for log in matching_logs:
-        recipient = decode(['address'], log['topics'][2])[0]
-        if recipient.lower() == target_recipient.lower():
-            write_txn(log)
-
+        write_txn(log)
 
 
 def create_txn(log):
@@ -66,7 +72,6 @@ def write_txn(log):
 
     conn = create_connection()
     insert_txn(conn, txn)
-    print('finished write_txn')
 
 
 def add_blocks_for_processing(start, end):
