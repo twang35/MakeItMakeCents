@@ -12,8 +12,8 @@ transfer_function_hash = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f5
 
 
 def main():
-    only_print_queue()
-    add_blocks_for_processing(start=19082604, end=19082620)
+    # only_print_queue()
+    add_blocks_for_processing(start=19082604, end=19152064)
     process_blocks()
 
 
@@ -28,6 +28,7 @@ def only_print_queue():
 
 def process_blocks():
     q = attach_queue()
+    conn = create_connection()
     i = 0
 
     while q.qsize() > 0:
@@ -36,11 +37,11 @@ def process_blocks():
         i += 1
 
         item = q.get()
-        process_block(item)
+        process_block(item, conn)
         q.ack(item)
 
 
-def process_block(block):
+def process_block(block, conn):
     web3 = Web3(HTTPProvider(ankr_endpoint))
     matching_logs = web3.eth.get_logs({
         'fromBlock': block,
@@ -51,7 +52,7 @@ def process_block(block):
 
     # parse topics and only process target address
     for log in matching_logs:
-        write_txn(log)
+        write_txn(log, conn)
 
 
 def create_txn(log):
@@ -67,10 +68,9 @@ def create_txn(log):
     return log['blockNumber'], log['transactionIndex'], log['logIndex'], sender, recipient, log['address'], value
 
 
-def write_txn(log):
+def write_txn(log, conn):
     txn = create_txn(log)
 
-    conn = create_connection()
     insert_txn(conn, txn)
 
 
