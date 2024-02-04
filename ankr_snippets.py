@@ -13,16 +13,18 @@ token_address = '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB'  # AltLayer Token (
 
 
 def main():
-    # only_print_queue()
-    add_blocks_for_processing(start=19082604, end=19152064)
-    process_blocks()
+    only_print_queue()
+
+    # started with 69461 queue size
+    # add_blocks_for_processing(start=19082604, end=19152064)
+    # process_blocks()
 
 
 def only_print_queue():
     q = attach_queue()
     print(f'queue size: {q.qsize()}')
     full_data = q.queue()
-    values = [element['data'] for element in full_data]
+    values = [element['data'] for element in full_data if element['status'] != 5]
     pprint(values)
     exit()
 
