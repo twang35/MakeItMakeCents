@@ -9,6 +9,7 @@ erc20_padding = 10 ** 18
 ankr_endpoint = 'https://rpc.ankr.com/eth'  # url string
 # Web3.utils.keccak256("Transfer(address,address,uint256)")
 transfer_function_hash = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
+token_address = '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB'  # AltLayer Token (ALT)
 
 
 def main():
@@ -47,7 +48,7 @@ def process_block(block, conn):
         'fromBlock': block,
         'toBlock': block,
         'topics': [transfer_function_hash],
-        'address': '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB',  # AltLayer Token (ALT)
+        'address': token_address,
     })
 
     # parse topics and only process target address
