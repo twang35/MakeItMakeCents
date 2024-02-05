@@ -1,8 +1,6 @@
-import eth_utils
 from eth_typing import BlockNumber
 from web3 import Web3, HTTPProvider
 from pprint import pprint
-from eth_abi import decode
 import datetime
 from database import *
 
@@ -13,17 +11,24 @@ token_address = '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB'  # AltLayer Token (
 
 
 def main():
-    # only_print_queue()
+    # only_print_queue(only_size=True)
 
     # started with 69461 queue size, start=19082604, end=19152064
-    # add_blocks_for_processing(start=19082604, end=19152064)
+    # start=19152064, end=19159749
+    # start=16300000, end=19152064
+    # add_blocks_for_processing(start=16300000, end=19152064)
+
+    # 2803559 at 2:31pm 2665039 at 9:24pm: ~20k/hr ~5.5 days to complete
+
     # table: transactions, block_time
     process_blocks(table='block_time')
 
 
-def only_print_queue():
+def only_print_queue(only_size=False):
     q = attach_queue()
     print(f'queue size: {q.qsize()}')
+    if only_size:
+        exit()
     full_data = q.queue()
     values = [element['data'] for element in full_data if element['status'] != 5]
     pprint(values)
