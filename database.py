@@ -1,9 +1,12 @@
 import sqlite3
 from sqlite3 import Error
 import persistqueue
+from eth_abi import decode
 
 database_path = r"/Users/tonywang/projects/stonks/test.db"
 queue_path = r"/Users/tonywang/projects/stonks/test_queue.db"
+
+erc20_padding = 10 ** 18
 
 
 def create_connection(db_file=database_path):
@@ -52,6 +55,25 @@ def create_table(create_sql):
     c.execute(create_sql)
 
     print(f'Created table with {create_sql}')
+
+
+def create_txn(log):
+    """
+    address: token contract address
+    topics: [function signature hash, sender address, recipient address]
+    data: value of transfer
+    """
+    sender = decode(['address'], log['topics'][1])[0]
+    recipient = decode(['address'], log['topics'][2])[0]
+    value = decode(['uint256'], log['data'])[0] / erc20_padding
+    # block_number, transaction_index, log_index, sender, recipient, token_id, value
+    return log['blockNumber'], log['transactionIndex'], log['logIndex'], sender, recipient, log['address'], value
+
+
+def write_txn(log, conn):
+    txn = create_txn(log)
+
+    insert_txn(conn, txn)
 
 
 def insert_txn(conn, txn):
