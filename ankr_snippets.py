@@ -16,7 +16,7 @@ def main():
     # only_print_queue()
 
     # started with 69461 queue size, start=19082604, end=19152064
-    add_blocks_for_processing(start=19082604, end=19152064)
+    # add_blocks_for_processing(start=19082604, end=19152064)
     # table: transactions, block_time
     process_blocks(table='block_time')
 

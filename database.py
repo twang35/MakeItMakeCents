@@ -49,6 +49,20 @@ def create_block_time_table():
     create_table(sql_create_block_table)
 
 
+def create_price_table():
+    # PRIMARY(token_address, timestamp), token_symbol, price, volume
+    sql_create_price_table = """ CREATE TABLE IF NOT EXISTS price (
+                                        token_address TEXT NOT NULL,
+                                        timestamp TEXT NOT NULL,
+                                        token_symbol TEXT NOT NULL,
+                                        price REAL NOT NULL,
+                                        volume REAL NOT NULL,
+                                        PRIMARY KEY (token_address, timestamp)
+                                        ); """
+
+    create_table(sql_create_price_table)
+
+
 def create_table(create_sql):
     conn = create_connection()
     c = conn.cursor()

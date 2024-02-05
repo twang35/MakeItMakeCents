@@ -1,48 +1,40 @@
 import requests
+from pprint import pprint
+from database import *
 
 # https://app.transpose.io/account/keys contains key as of Feb 5, 2024
 with open('transpose_key.txt', 'r') as f:
     transpose_key = f.read()
 
-url = "https://api.transpose.io/sql"
-# sql_query = """
-# WITH before_timestamp AS (
-#     SELECT *
-#     FROM ethereum.token_prices
-#     WHERE token_address = '0x111111111117dc0aa78b770fa6a738034120c302'
-#       AND timestamp < '2023-02-02 14:15:16'
-#     ORDER BY timestamp DESC
-#     LIMIT 1
-# ),
-# after_timestamp AS (
-#     SELECT *
-#     FROM ethereum.token_prices
-#     WHERE token_address = '0x111111111117dc0aa78b770fa6a738034120c302'
-#       AND timestamp >= '2023-02-02 14:15:16'
-#     ORDER BY timestamp ASC
-#     LIMIT 1
-# )
-# SELECT *
-# FROM before_timestamp
-# UNION ALL
-# SELECT *
-# FROM after_timestamp;"""
-sql_query = """
-SELECT *
-FROM ethereum.token_prices_ohlc_1m
-WHERE token_address = '0x111111111117dc0aa78b770fa6a738034120c302'
-    AND block_number = 16541503"""
 
-headers = {
-    'Content-Type': 'application/json',
-    'X-API-KEY': transpose_key,
-}
-response = requests.post(url,
-    headers=headers,
-    json={
-        'sql': sql_query,
-    },
-)
+def main():
+    get_prices()
 
-print(response.text)
-print('Credits charged:', response.headers.get('X-Credits-Charged', None))
+
+def get_prices(token_address='0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB', start='2024-01-24 21:46:00', end='2024-01-25 09:15:36'):
+    url = "https://api.transpose.io/sql"
+    sql_query = f"""
+    SELECT *
+    FROM ethereum.token_prices_ohlc_1m
+    WHERE token_address = '{token_address}'
+        AND timestamp BETWEEN '{start}' AND '{end}'
+    ORDER BY timestamp;
+    """
+
+    headers = {
+        'Content-Type': 'application/json',
+        'X-API-KEY': transpose_key,
+    }
+    response = requests.post(url,
+        headers=headers,
+        json={
+            'sql': sql_query,
+        },
+    )
+
+    prices = response.json()['results']
+    print('Credits charged:', response.headers.get('X-Credits-Charged', None))
+    return prices
+
+
+main()
