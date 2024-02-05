@@ -29,7 +29,7 @@ url = "https://api.transpose.io/sql"
 # FROM after_timestamp;"""
 sql_query = """
 SELECT *
-FROM ethereum.token_prices
+FROM ethereum.token_prices_ohlc_1m
 WHERE token_address = '0x111111111117dc0aa78b770fa6a738034120c302'
     AND block_number = 16541503"""
 

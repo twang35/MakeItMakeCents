@@ -18,7 +18,7 @@ def create_connection(db_file=database_path):
     return conn
 
 
-def create_txn_table(conn):
+def create_txn_table():
     # block_number, transaction_index, log_index, sender, recipient, token_id, value, timestamp
     sql_create_transactions_table = """ CREATE TABLE IF NOT EXISTS transactions (
                                         block_number INTEGER NOT NULL,
@@ -31,16 +31,27 @@ def create_txn_table(conn):
                                         PRIMARY KEY (recipient, token_id, block_number, transaction_index, log_index)
                                         ); """
 
-    # create tables
-    if conn is not None:
-        # create projects table
-        try:
-            c = conn.cursor()
-            c.execute(sql_create_transactions_table)
-        except Error as e:
-            print(e)
-    else:
-        print("Error! cannot create the database connection.")
+    create_table(sql_create_transactions_table)
+
+
+def create_block_time_table():
+    # PRIMARY(block_number, timestamp, epoch_millis)
+    sql_create_block_table = """ CREATE TABLE IF NOT EXISTS block_time (
+                                        block_number INTEGER NOT NULL,
+                                        timestamp TEXT NOT NULL,
+                                        epoch_millis INTEGER NOT NULL,
+                                        PRIMARY KEY (block_number, timestamp, epoch_millis)
+                                        ); """
+
+    create_table(sql_create_block_table)
+
+
+def create_table(create_sql):
+    conn = create_connection()
+    c = conn.cursor()
+    c.execute(create_sql)
+
+    print(f'Created table with {create_sql}')
 
 
 def insert_txn(conn, txn):
