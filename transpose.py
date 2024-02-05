@@ -1,5 +1,6 @@
 import requests
 
+# https://app.transpose.io/account/keys contains key as of Feb 5, 2024
 with open('transpose_key.txt', 'r') as f:
     transpose_key = f.read()
 
