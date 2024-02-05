@@ -76,7 +76,7 @@ def process_block_time_block(block_num, conn, web3):
 
 def add_blocks_for_processing(start, end):
     q = attach_queue()
-    q.clear_acked_data(keep_latest=0, max_delete=100000)
+    q.clear_acked_data(keep_latest=0, max_delete=1000000)
     i = start
 
     while i <= end:

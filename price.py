@@ -55,7 +55,7 @@ def get_prices(token_address, start, end):
     )
 
     prices = response.json()['results']
-    print('Credits charged:', response.headers.get('X-Credits-Charged', None))
+    print('Transpose credits charged:', response.headers.get('X-Credits-Charged', None))
     return prices
 
 

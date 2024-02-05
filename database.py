@@ -14,7 +14,7 @@ def create_connection(db_file=database_path):
     conn = None
     try:
         conn = sqlite3.connect(db_file)
-        print(sqlite3.version)
+        print(f'database connected at {database_path} with version {sqlite3.version}')
     except Error as e:
         print(e)
 
