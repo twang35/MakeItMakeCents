@@ -3,6 +3,7 @@ from eth_typing import BlockNumber
 from web3 import Web3, HTTPProvider
 from pprint import pprint
 from eth_abi import decode
+import datetime
 from database import *
 
 ankr_endpoint = 'https://rpc.ankr.com/eth'  # url string
@@ -12,11 +13,12 @@ token_address = '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB'  # AltLayer Token (
 
 
 def main():
-    only_print_queue()
+    # only_print_queue()
 
     # started with 69461 queue size, start=19082604, end=19152064
-    # add_blocks_for_processing(start=19082604, end=19082604)
-    # process_blocks()
+    add_blocks_for_processing(start=19082604, end=19152064)
+    # table: transactions, block_time
+    process_blocks(table='block_time')
 
 
 def only_print_queue():
@@ -28,7 +30,7 @@ def only_print_queue():
     exit()
 
 
-def process_blocks():
+def process_blocks(table='transactions'):
     q = attach_queue()
     conn = create_connection()
     web3 = Web3(HTTPProvider(ankr_endpoint))
@@ -40,7 +42,11 @@ def process_blocks():
         i += 1
 
         item = q.get()
-        process_txn_block(item, conn, web3)
+        if table == 'transactions':
+            process_txn_block(item, conn, web3)
+        elif table == 'block_time':
+            process_block_time_block(item, conn, web3)
+
         q.ack(item)
 
 
@@ -57,9 +63,20 @@ def process_txn_block(block, conn, web3):
         write_txn(log, conn)
 
 
+def process_block_time_block(block_num, conn, web3):
+    block_data = web3.eth.get_block(block_identifier=BlockNumber(block_num), full_transactions=False)
+
+    epoch_time = block_data['timestamp']
+    timestamp_string = datetime.datetime.utcfromtimestamp(epoch_time).strftime('%Y-%m-%d %H:%M:%S')
+
+    row = (block_num, timestamp_string, epoch_time)
+
+    insert_block_time(conn, row)
+
+
 def add_blocks_for_processing(start, end):
     q = attach_queue()
-    q.clear_acked_data(keep_latest=0)
+    q.clear_acked_data(keep_latest=0, max_delete=100000)
     i = start
 
     while i <= end:

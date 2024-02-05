@@ -38,12 +38,12 @@ def create_txn_table():
 
 
 def create_block_time_table():
-    # PRIMARY(block_number, timestamp, epoch_millis)
+    # PRIMARY(block_number, timestamp, epoch_seconds)
     sql_create_block_table = """ CREATE TABLE IF NOT EXISTS block_time (
                                         block_number INTEGER NOT NULL,
                                         timestamp TEXT NOT NULL,
-                                        epoch_millis INTEGER NOT NULL,
-                                        PRIMARY KEY (block_number, timestamp, epoch_millis)
+                                        epoch_seconds INTEGER NOT NULL,
+                                        PRIMARY KEY (block_number, timestamp, epoch_seconds)
                                         ); """
 
     create_table(sql_create_block_table)
@@ -85,6 +85,17 @@ def insert_txn(conn, txn):
      token_id, value) VALUES(?,?,?,?,?,?,?)'''
     cur = conn.cursor()
     cur.execute(sql, txn)
+    conn.commit()
+
+
+def insert_block_time(conn, row):
+    """
+    Insert or replace a new txn row into the table.
+    """
+
+    sql = '''INSERT OR REPLACE INTO block_time(block_number, timestamp, epoch_seconds) VALUES(?,?,?)'''
+    cur = conn.cursor()
+    cur.execute(sql, row)
     conn.commit()
 
 
