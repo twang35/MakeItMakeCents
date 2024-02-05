@@ -113,5 +113,16 @@ def insert_block_time(conn, row):
     conn.commit()
 
 
+def insert_price(conn, row):
+    """
+    Insert or replace a new txn row into the table.
+    """
+
+    sql = '''INSERT OR REPLACE INTO price(token_address, timestamp, token_symbol, price, volume) VALUES(?,?,?,?,?)'''
+    cur = conn.cursor()
+    cur.execute(sql, row)
+    conn.commit()
+
+
 def attach_queue(path=queue_path):
     return persistqueue.UniqueAckQ(path=path)

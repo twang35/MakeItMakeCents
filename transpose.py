@@ -1,6 +1,7 @@
 import requests
 from pprint import pprint
 from database import *
+import datetime
 
 # https://app.transpose.io/account/keys contains key as of Feb 5, 2024
 with open('transpose_key.txt', 'r') as f:
@@ -8,10 +9,31 @@ with open('transpose_key.txt', 'r') as f:
 
 
 def main():
-    get_prices()
+    prices = get_prices(
+        token_address='0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB',
+        start='2024-01-24 21:46:00', end='2024-02-15 09:15:36')
+    process_prices(prices)
 
 
-def get_prices(token_address='0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB', start='2024-01-24 21:46:00', end='2024-01-25 09:15:36'):
+def process_prices(prices):
+    conn = create_connection()
+    i = 0
+
+    while i < len(prices):
+        if i % 10 == 0:
+            print(f'prices remaining: {len(prices) - i}')
+        price = prices[i]
+        # token_address, timestamp, token_symbol, price, volume
+        row = (price['token_address'],
+               datetime.datetime.fromisoformat(price['timestamp']).strftime('%Y-%m-%d %H:%M:%S'),
+               price['token_symbol'], price['average_price'], price['volume'])
+        insert_price(conn, row)
+        i += 1
+
+    print('completed processing prices successfully')
+
+
+def get_prices(token_address, start, end):
     url = "https://api.transpose.io/sql"
     sql_query = f"""
     SELECT *
