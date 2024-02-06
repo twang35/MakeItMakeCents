@@ -24,17 +24,6 @@ def main():
     process_blocks(table='block_time')
 
 
-def only_print_queue(only_size=False):
-    q = attach_queue()
-    print(f'queue size: {q.qsize()}')
-    if only_size:
-        exit()
-    full_data = q.queue()
-    values = [element['data'] for element in full_data if element['status'] != 5]
-    pprint(values)
-    exit()
-
-
 def process_blocks(table='transactions'):
     q = attach_queue()
     conn = create_connection()
@@ -77,18 +66,6 @@ def process_block_time_block(block_num, conn, web3):
     row = (block_num, timestamp_string, epoch_time)
 
     insert_block_time(conn, row)
-
-
-def add_blocks_for_processing(start, end):
-    q = attach_queue()
-    q.clear_acked_data(keep_latest=0, max_delete=1000000)
-    i = start
-
-    while i <= end:
-        q.put(i)
-        i += 1
-
-    print(f'added blocks from {start} to {end} for processing')
 
 
 main()

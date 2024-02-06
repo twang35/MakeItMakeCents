@@ -2,9 +2,11 @@ import sqlite3
 from sqlite3 import Error
 import persistqueue
 from eth_abi import decode
+from pprint import pprint
 
 database_path = r"/Users/tonywang/projects/stonks/test.db"
-queue_path = r"/Users/tonywang/projects/stonks/test_queue.db"
+test_queue_path = r"/Users/tonywang/projects/stonks/test_queue.db"
+balance_queue_path = r"/Users/tonywang/projects/stonks/balance_queue.db"
 
 erc20_padding = 10 ** 18
 
@@ -124,5 +126,33 @@ def insert_price(conn, row):
     conn.commit()
 
 
-def attach_queue(path=queue_path):
+def attach_queue(queue='test'):
+    path = test_queue_path
+    if queue == 'test':
+        path = test_queue_path
+    elif queue == 'balance':
+        path = balance_queue_path
     return persistqueue.UniqueAckQ(path=path)
+
+
+def add_blocks_for_processing(start, end, queue='test'):
+    q = attach_queue(queue)
+    q.clear_acked_data(keep_latest=0, max_delete=10000000)
+    i = start
+
+    while i <= end:
+        q.put(i)
+        i += 1
+
+    print(f'added blocks from {start} to {end} for processing to {queue} queue')
+
+
+def only_print_queue(only_size=False, queue='test'):
+    q = attach_queue(queue)
+    print(f'queue size: {q.qsize()}')
+    if only_size:
+        exit()
+    full_data = q.queue()
+    values = [element['data'] for element in full_data if element['status'] != 5]
+    pprint(values)
+    exit()
