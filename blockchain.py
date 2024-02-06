@@ -14,23 +14,21 @@ transfer_function_hash = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f5
 token_address = '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB'  # AltLayer Token (ALT)
 
 batch_block_time_increment = 5000
+batch_txn_logs_increment = 100
 
 
 def main():
     # only_print_queue(only_size=True)
 
-    # started with 69461 queue size, start=19082604, end=19152064
-    # start=19152064, end=19159749
-    # start=16300000, end=19152064
-    # start=16300000, end=19166426 batch
-    # 10k, 719
-    # 5k, 174
-    # add_blocks_for_processing(start=16500000, end=19161426, queue='test', increment=batch_block_time_increment)
+    # transactions: start=19082604, end=19152064
+    # transactions: start=18937380, end=19082604
+    # block_time:   start=16300000, end=19166426 batch
+    add_blocks_for_processing(start=18937380, end=19082604, queue='test', increment=batch_txn_logs_increment)
 
-    # 2803559 at 2:31pm 2665039 at 9:24pm: ~20k/hr ~5.5 days to complete
+    # 401071 txns before
 
     # table: transactions, block_time
-    process_blocks(table='block_time')
+    process_blocks(table='transactions')
 
 
 def process_blocks(table='transactions'):
@@ -65,7 +63,7 @@ def process_blocks(table='transactions'):
 def process_txn_block(block, conn, web3):
     matching_logs = web3.eth.get_logs({
         'fromBlock': block,
-        'toBlock': block,
+        'toBlock': block + batch_txn_logs_increment,
         'topics': [transfer_function_hash],
         'address': token_address,
     })
