@@ -10,9 +10,12 @@ with open('transpose_key.txt', 'r') as f:
 
 
 def main():
+    # sql query can only return 3000 rows at a time (50 hrs)
+    # add 48 hr blocks to queue and query for 48 hrs at a time
     prices = get_prices(
         token_address='0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB',
-        start='2024-01-24 21:46:00', end='2024-02-15 09:15:36')
+        # start='2024-01-24 21:46:00', end='2024-02-15 09:15:36')
+        start='2024-01-27 20:26:00', end='2024-02-15 09:15:36')
     process_prices(prices)
 
 

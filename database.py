@@ -24,7 +24,7 @@ def create_connection(db_file=database_path):
 
 
 def create_txn_table():
-    # block_number, transaction_index, log_index, sender, recipient, token_id, value, timestamp
+    # block_number, transaction_index, log_index, sender, recipient, token_id, value
     sql_create_transactions_table = """ CREATE TABLE IF NOT EXISTS transactions (
                                         block_number INTEGER NOT NULL,
                                         transaction_index INTEGER NOT NULL,

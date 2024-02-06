@@ -9,7 +9,7 @@ def main():
     cursor = conn.cursor()
 
     # read first txn
-    # block_number, transaction_index, log_index, sender, recipient, token_id, value, timestamp
+    # block_number, transaction_index, log_index, sender, recipient, token_id, value
     # use limit 1000 and https://stackoverflow.com/questions/14468586
     query = """
         SELECT * FROM transactions 
@@ -25,6 +25,7 @@ def main():
         print(row)
 
     # get associated timestamps
+    # load all timestamps in memory?
 
     # get price if available, else default to 0
 
