@@ -126,13 +126,21 @@ def insert_price(conn, row):
     conn.commit()
 
 
+"""
+class AckStatus(object):
+    inited = '0'        # all new entries start with 0
+    ready = '1'         # unack will revert to ready when queue is attached and ready objects will be given to consumers
+    unack = '2'         # has been given to consumer, but not acked yet
+    acked = '5'
+    ack_failed = '9'
+"""
 def attach_queue(queue='test'):
     path = test_queue_path
     if queue == 'test':
         path = test_queue_path
     elif queue == 'balance':
         path = balance_queue_path
-    return persistqueue.UniqueAckQ(path=path)
+    return persistqueue.UniqueAckQ(path=path, multithreading=True)
 
 
 def add_blocks_for_processing(start, end, queue='test'):
