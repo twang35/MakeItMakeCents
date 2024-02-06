@@ -10,8 +10,10 @@ def main():
 
     # read first txn
     # block_number, transaction_index, log_index, sender, recipient, token_id, value, timestamp
+    # use limit 1000 and https://stackoverflow.com/questions/14468586
     query = """
         SELECT * FROM transactions 
+        WHERE (block_number, transaction_index, log_index) > (18940311, 3, 2)
         ORDER BY block_number ASC 
         LIMIT 100
         """
