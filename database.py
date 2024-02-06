@@ -41,7 +41,7 @@ def create_txn_table():
 
 def create_block_time_table():
     # PRIMARY(block_number, timestamp, epoch_seconds)
-    sql_create_block_table = """ CREATE TABLE IF NOT EXISTS block_time (
+    sql_create_block_table = """ CREATE TABLE IF NOT EXISTS block_times (
                                         block_number INTEGER NOT NULL,
                                         timestamp TEXT NOT NULL,
                                         epoch_seconds INTEGER NOT NULL,
@@ -53,13 +53,31 @@ def create_block_time_table():
 
 def create_price_table():
     # PRIMARY(token_address, timestamp), token_symbol, price, volume
-    sql_create_price_table = """ CREATE TABLE IF NOT EXISTS price (
+    sql_create_price_table = """ CREATE TABLE IF NOT EXISTS prices (
                                         token_address TEXT NOT NULL,
                                         timestamp TEXT NOT NULL,
                                         token_symbol TEXT NOT NULL,
                                         price REAL NOT NULL,
                                         volume REAL NOT NULL,
                                         PRIMARY KEY (token_address, timestamp)
+                                        ); """
+
+    create_table(sql_create_price_table)
+
+
+def create_balance_table():
+    # PRIMARY(wallet_address, token_address, epoch_seconds),
+    #   timestamp, balance, average_cost_basis, realized_gains, unrealized_gains
+    sql_create_price_table = """ CREATE TABLE IF NOT EXISTS balances (
+                                        wallet_address TEXT NOT NULL,
+                                        token_address TEXT NOT NULL,
+                                        epoch_seconds INTEGER NOT NULL,
+                                        timestamp TEXT NOT NULL,
+                                        balance REAL NOT NULL,
+                                        average_cost_basis REAL NOT NULL,
+                                        realized_gains REAL NOT NULL,
+                                        unrealized_gains REAL NOT NULL,
+                                        PRIMARY KEY (wallet_address, token_address, epoch_seconds)
                                         ); """
 
     create_table(sql_create_price_table)
@@ -109,7 +127,7 @@ def insert_block_time(conn, row):
     Insert or replace a new txn row into the table.
     """
 
-    sql = '''INSERT OR REPLACE INTO block_time(block_number, timestamp, epoch_seconds) VALUES(?,?,?)'''
+    sql = '''INSERT OR REPLACE INTO block_times(block_number, timestamp, epoch_seconds) VALUES(?,?,?)'''
     cur = conn.cursor()
     cur.execute(sql, row)
     conn.commit()
@@ -120,7 +138,7 @@ def insert_price(conn, row):
     Insert or replace a new txn row into the table.
     """
 
-    sql = '''INSERT OR REPLACE INTO price(token_address, timestamp, token_symbol, price, volume) VALUES(?,?,?,?,?)'''
+    sql = '''INSERT OR REPLACE INTO prices(token_address, timestamp, token_symbol, price, volume) VALUES(?,?,?,?,?)'''
     cur = conn.cursor()
     cur.execute(sql, row)
     conn.commit()

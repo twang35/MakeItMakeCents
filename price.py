@@ -4,6 +4,7 @@ from database import *
 import datetime
 
 # https://app.transpose.io/account/keys contains key as of Feb 5, 2024
+# https://app.transpose.io/playground to play with SQL queries
 with open('transpose_key.txt', 'r') as f:
     transpose_key = f.read()
 

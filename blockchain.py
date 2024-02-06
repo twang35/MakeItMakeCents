@@ -21,13 +21,11 @@ def main():
     # only_print_queue(only_size=True)
 
     # transactions: start=19082604, end=19152064
-    # transactions: start=18937380, end=19082604
+    # transactions: start=18937380, end=19082604, 401071 txns before, 402644 after
     # block_time:   start=16300000, end=19166426 batch
-    add_blocks_for_processing(start=18937380, end=19082604, queue='test', increment=batch_txn_logs_increment)
+    # add_blocks_for_processing(start=18937380, end=19082604, queue='test', increment=batch_txn_logs_increment)
 
-    # 401071 txns before
-
-    # table: transactions, block_time
+    # table: transactions, block_times
     process_blocks(table='transactions')
 
 
@@ -53,8 +51,8 @@ def process_blocks(table='transactions'):
         item = q.get()
         if table == 'transactions':
             process_txn_block(item, conn, web3)
-        elif table == 'block_time':
-            # process_block_time_block(item, conn, web3)
+        elif table == 'block_times':
+            # process_block_times_block(item, conn, web3)
             process_batch_block_times(item, conn)
 
         q.ack(item)
@@ -73,7 +71,7 @@ def process_txn_block(block, conn, web3):
         write_txn(log, conn)
 
 
-def process_block_time_block(block_num, conn, web3):
+def process_block_times_block(block_num, conn, web3):
     block_data = web3.eth.get_block(block_identifier=BlockNumber(block_num), full_transactions=False)
 
     epoch_time = block_data['timestamp']
