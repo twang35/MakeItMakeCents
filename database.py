@@ -143,14 +143,14 @@ def attach_queue(queue='test'):
     return persistqueue.UniqueAckQ(path=path, multithreading=True)
 
 
-def add_blocks_for_processing(start, end, queue='test'):
+def add_blocks_for_processing(start, end, queue='test', increment=1):
     q = attach_queue(queue)
     q.clear_acked_data(keep_latest=0, max_delete=10000000)
     i = start
 
     while i <= end:
         q.put(i)
-        i += 1
+        i += increment
 
     print(f'added blocks from {start} to {end} for processing to {queue} queue')
 
