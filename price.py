@@ -15,7 +15,7 @@ def main():
     prices = get_prices(
         token_address='0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB',
         # start='2024-01-24 21:46:00', end='2024-02-15 09:15:36')
-        start='2024-01-27 20:26:00', end='2024-02-15 09:15:36')
+        start='2024-02-03 20:26:00', end='2024-02-15 09:15:36')
     process_prices(prices)
 
 
@@ -24,7 +24,7 @@ def process_prices(prices):
     i = 0
 
     while i < len(prices):
-        if i % 10 == 0:
+        if i % 100 == 0:
             print(f'prices remaining: {len(prices) - i}')
         price = prices[i]
         # token_address, timestamp, token_symbol, price, volume
