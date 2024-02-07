@@ -8,9 +8,6 @@ def main():
     conn = create_connection()
     cursor = conn.cursor()
 
-    # read first txn
-    # 0 block_number, 1 transaction_index, 2 log_index, 3 sender, 4 recipient, 5 token_id, 6 value
-    # use limit 1000 and https://stackoverflow.com/questions/14468586
     query = """
         SELECT * FROM transactions
         ORDER BY block_number, log_index;
@@ -36,9 +33,48 @@ def main():
     print("Total prices rows are:  ", len(prices_rows))
     time_to_price, first_price_time_str = to_prices_map(prices_rows)
 
-    # write first row to balances
-    #   PRIMARY(wallet_address, token_address, epoch_seconds),
-    #   timestamp, balance, average_cost_basis, realized_gains, unrealized_gains
+    # compute balances table
+
+    wallet_to_balance = {}  # wallet_address: [balance, average_cost_basis, realized_gains, unrealized_gains]
+    null_address = '0x0000000000000000000000000000000000000000'
+
+    i = 0
+    # 0 block_number, 1 transaction_index, 2 log_index, 3 sender, 4 recipient, 5 token_id, 6 value
+    for txn in txns:
+        if i % 10000 == 0:
+            print(f'remaining transactions to process: {len(txns) - i}')
+        i += 1
+
+        sender = txn[3]
+        recipient = txn[4]
+        value = txn[6]
+
+        if value == 0:
+            continue
+
+        if sender == null_address:
+            # do not subtract
+            print(f'null address sender: {value}')
+        else:
+            wallet_to_balance[sender] -= value
+
+        if recipient == null_address:
+            # do not subtract
+            print(f'null address recipient: {value}')
+        else:
+            if recipient not in wallet_to_balance:
+                wallet_to_balance[recipient] = 0
+            wallet_to_balance[recipient] += value
+
+        if recipient != null_address:
+            row = (recipient, '_', 0, block_times[txn[0]], wallet_to_balance[recipient], 0, 0, 0)
+            insert_balance(conn, row)
+        if sender != null_address:
+            row = (sender, '_', 0, block_times[txn[0]], wallet_to_balance[sender], 0, 0, 0)
+            insert_balance(conn, row)
+
+        #   PRIMARY(wallet_address, token_address, epoch_seconds),
+        #   timestamp, balance, average_cost_basis, realized_gains, unrealized_gains
 
 
 def to_block_times_map(block_times_rows):

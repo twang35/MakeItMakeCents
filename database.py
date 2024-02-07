@@ -116,7 +116,7 @@ def insert_txn(conn, txn):
     """
 
     sql = '''INSERT OR REPLACE INTO transactions(block_number, transaction_index, log_index, sender, recipient,
-     token_id, value) VALUES(?,?,?,?,?,?,?)'''
+     token_id, value) VALUES(?,?,?,?,?,?,?);'''
     cur = conn.cursor()
     cur.execute(sql, txn)
     conn.commit()
@@ -127,7 +127,7 @@ def insert_block_time(conn, row):
     Insert or replace a new txn row into the table.
     """
 
-    sql = '''INSERT OR REPLACE INTO block_times(block_number, timestamp, epoch_seconds) VALUES(?,?,?)'''
+    sql = '''INSERT OR REPLACE INTO block_times(block_number, timestamp, epoch_seconds) VALUES(?,?,?);'''
     cur = conn.cursor()
     cur.execute(sql, row)
     conn.commit()
@@ -138,7 +138,19 @@ def insert_price(conn, row):
     Insert or replace a new txn row into the table.
     """
 
-    sql = '''INSERT OR REPLACE INTO prices(token_address, timestamp, token_symbol, price, volume) VALUES(?,?,?,?,?)'''
+    sql = '''INSERT OR REPLACE INTO prices(token_address, timestamp, token_symbol, price, volume) VALUES(?,?,?,?,?);'''
+    cur = conn.cursor()
+    cur.execute(sql, row)
+    conn.commit()
+
+
+def insert_balance(conn, row):
+    """
+    Insert or replace a new txn row into the table.
+    """
+
+    sql = '''INSERT OR REPLACE INTO balances(wallet_address, token_address, epoch_seconds, timestamp, balance,
+     average_cost_basis, realized_gains, unrealized_gains) VALUES(?,?,?,?,?,?,?,?);'''
     cur = conn.cursor()
     cur.execute(sql, row)
     conn.commit()
