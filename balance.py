@@ -6,12 +6,16 @@ from database import *
 
 def main():
     conn = create_connection()
-    cursor = conn.cursor()
 
     # compute_balances(conn)
+    get_balances_before(conn, '2024-02-01 13:00:00')
+
+
+def get_balances_before(conn, timestamp):
+    cursor = conn.cursor()
 
     start_time = time.time()
-    query = """
+    query = f"""
         SELECT 
             wallet_address, 
             balance, 
@@ -25,21 +29,18 @@ def main():
             FROM 
                 balances
             WHERE 
-                timestamp <= '2024-02-01 13:46:00'
+                timestamp <= '{timestamp}'
         ) AS ranked
         WHERE 
             row_num = 1
         ORDER BY 
-            balance DESC
-        LIMIT 300;
+            balance DESC;
         """
     cursor.execute(query)
-    latest_balances = cursor.fetchall()
-    print("Total unique balances rows are:  ", len(latest_balances))
+    balances = cursor.fetchall()
+    print("Total unique balances rows are:  ", len(balances))
     print(f'query time: {time.time() - start_time}')
-
-    for row in latest_balances:
-        print(row)
+    return balances
 
 
 def compute_balances(conn):
