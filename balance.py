@@ -8,6 +8,36 @@ def main():
     conn = create_connection()
     cursor = conn.cursor()
 
+    # compute_balances(conn)
+
+    query = """
+        SELECT 
+            DISTINCT b.wallet_address, 
+            b.balance, 
+            b.timestamp
+        FROM 
+            balances b
+        WHERE
+            b.timestamp = (
+                SELECT MAX(timestamp)
+                FROM balances
+                WHERE timestamp <= '2024-02-08 13:46:00'
+                AND wallet_address = b.wallet_address
+            )
+        ORDER BY 
+            b.balance DESC
+        LIMIT 300;
+        """
+    cursor.execute(query)
+    latest_balances = cursor.fetchall()
+    print("Total unique balances rows are:  ", len(latest_balances))
+    for row in latest_balances:
+        print(row)
+
+
+def compute_balances(conn):
+    cursor = conn.cursor()
+
     query = """
         SELECT * FROM transactions
         ORDER BY block_number, log_index;
@@ -67,14 +97,14 @@ def main():
             wallet_to_balance[recipient] += value
 
         if recipient != null_address:
-            row = (recipient, '_', 0, block_times[txn[0]], wallet_to_balance[recipient], 0, 0, 0)
+            row = (recipient, '_', block_times[txn[0]], wallet_to_balance[recipient], 0, 0, 0)
             insert_balance(conn, row)
         if sender != null_address:
-            row = (sender, '_', 0, block_times[txn[0]], wallet_to_balance[sender], 0, 0, 0)
+            row = (sender, '_', block_times[txn[0]],  wallet_to_balance[sender], 0, 0, 0)
             insert_balance(conn, row)
 
-        #   PRIMARY(wallet_address, token_address, epoch_seconds),
-        #   timestamp, balance, average_cost_basis, realized_gains, unrealized_gains
+        #   PRIMARY(wallet_address, token_address, timestamp),
+        #    balance, average_cost_basis, realized_gains, unrealized_gains
 
 
 def to_block_times_map(block_times_rows):

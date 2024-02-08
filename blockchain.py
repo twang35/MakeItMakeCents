@@ -22,6 +22,8 @@ def main():
 
     # transactions: start=19082604, end=19152064
     # transactions: start=18937380, end=19082604, 401071 txns before, 402644 after
+    # add_blocks_for_processing(start=19082604, end=19082604, queue='test')
+
     # block_time:   start=16300000, end=19166426 batch
     # add_blocks_for_processing(start=18937380, end=19082604, queue='test', increment=batch_txn_logs_increment)
 
