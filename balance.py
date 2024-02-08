@@ -10,27 +10,34 @@ def main():
 
     # compute_balances(conn)
 
+    start_time = time.time()
     query = """
         SELECT 
-            DISTINCT b.wallet_address, 
-            b.balance, 
-            b.timestamp
-        FROM 
-            balances b
-        WHERE
-            b.timestamp = (
-                SELECT MAX(timestamp)
-                FROM balances
-                WHERE timestamp <= '2024-02-08 13:46:00'
-                AND wallet_address = b.wallet_address
-            )
+            wallet_address, 
+            balance, 
+            timestamp
+        FROM (
+            SELECT 
+                wallet_address, 
+                balance, 
+                timestamp,
+                ROW_NUMBER() OVER (PARTITION BY wallet_address ORDER BY timestamp DESC) AS row_num
+            FROM 
+                balances
+            WHERE 
+                timestamp <= '2024-02-01 13:46:00'
+        ) AS ranked
+        WHERE 
+            row_num = 1
         ORDER BY 
-            b.balance DESC
+            balance DESC
         LIMIT 300;
         """
     cursor.execute(query)
     latest_balances = cursor.fetchall()
     print("Total unique balances rows are:  ", len(latest_balances))
+    print(f'query time: {time.time() - start_time}')
+
     for row in latest_balances:
         print(row)
 
