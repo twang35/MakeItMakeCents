@@ -67,15 +67,15 @@ def create_price_table():
 
 def create_balance_table():
     # PRIMARY(wallet_address, token_address, timestamp),
-    #   balance, average_cost_basis, realized_gains, unrealized_gains
+    #   balance, total_cost_basis, remaining_cost_basis, realized_gains, unrealized_gains
     sql_create_price_table = """ CREATE TABLE IF NOT EXISTS balances (
                                         wallet_address TEXT NOT NULL,
                                         token_address TEXT NOT NULL,
                                         timestamp TEXT NOT NULL,
                                         balance REAL NOT NULL,
-                                        average_cost_basis REAL NOT NULL,
+                                        total_cost_basis REAL NOT NULL,
+                                        remaining_cost_basis REAL NOT NULL,
                                         realized_gains REAL NOT NULL,
-                                        unrealized_gains REAL NOT NULL,
                                         PRIMARY KEY (wallet_address, token_address, timestamp)
                                         ); """
 
@@ -148,8 +148,8 @@ def insert_balance(conn, row):
     Insert or replace a new txn row into the table.
     """
 
-    sql = '''INSERT OR REPLACE INTO balances(wallet_address, token_address, timestamp, balance,
-     average_cost_basis, realized_gains, unrealized_gains) VALUES(?,?,?,?,?,?,?);'''
+    sql = '''INSERT OR REPLACE INTO balances(wallet_address, token_address, timestamp, balance, total_cost_basis,
+     remaining_cost_basis, realized_gains) VALUES(?,?,?,?,?,?,?);'''
     cur = conn.cursor()
     cur.execute(sql, row)
     conn.commit()
