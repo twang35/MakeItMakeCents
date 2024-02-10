@@ -31,7 +31,7 @@ def get_balances_before(conn, timestamp):
                 timestamp,
                 balance, 
                 total_cost_basis,
-                remaining_cost_basis
+                remaining_cost_basis,
                 realized_gains,
                 ROW_NUMBER() OVER (PARTITION BY wallet_address ORDER BY timestamp DESC) AS row_num
             FROM 
