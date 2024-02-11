@@ -74,11 +74,12 @@ def create_balance_table():
                                         wallet_address TEXT NOT NULL,
                                         token_address TEXT NOT NULL,
                                         timestamp TEXT NOT NULL,
+                                        block_number INTEGER NOT NULL,
                                         balance REAL NOT NULL,
                                         total_cost_basis REAL NOT NULL,
                                         remaining_cost_basis REAL NOT NULL,
                                         realized_gains REAL NOT NULL,
-                                        PRIMARY KEY (wallet_address, token_address, timestamp)
+                                        PRIMARY KEY (wallet_address, token_address, timestamp, block_number)
                                         ); """
 
     create_table(sql_create_price_table)
@@ -110,10 +111,6 @@ def write_txn(log, block_to_time, conn):
 
 
 def insert_txn(conn, txn):
-    """
-    Insert or replace a new txn row into the table.
-    """
-
     sql = '''INSERT OR REPLACE INTO transactions(block_number, transaction_index, log_index, timestamp, sender,
      recipient, token_id, value) VALUES(?,?,?,?,?,?,?,?);'''
     cur = conn.cursor()
@@ -122,10 +119,6 @@ def insert_txn(conn, txn):
 
 
 def insert_block_time(conn, row):
-    """
-    Insert or replace a new txn row into the table.
-    """
-
     sql = '''INSERT OR REPLACE INTO block_times(block_number, timestamp, epoch_seconds) VALUES(?,?,?);'''
     cur = conn.cursor()
     cur.execute(sql, row)
@@ -133,10 +126,6 @@ def insert_block_time(conn, row):
 
 
 def insert_price(conn, row):
-    """
-    Insert or replace a new txn row into the table.
-    """
-
     sql = '''INSERT OR REPLACE INTO prices(token_address, timestamp, token_symbol, price, volume) VALUES(?,?,?,?,?);'''
     cur = conn.cursor()
     cur.execute(sql, row)
@@ -144,12 +133,8 @@ def insert_price(conn, row):
 
 
 def insert_balance(conn, row):
-    """
-    Insert or replace a new txn row into the table.
-    """
-
-    sql = '''INSERT OR REPLACE INTO balances(wallet_address, token_address, timestamp, balance, total_cost_basis,
-     remaining_cost_basis, realized_gains) VALUES(?,?,?,?,?,?,?);'''
+    sql = '''INSERT OR REPLACE INTO balances(wallet_address, token_address, timestamp, block_number, balance,
+     total_cost_basis, remaining_cost_basis, realized_gains) VALUES(?,?,?,?,?,?,?,?);'''
     cur = conn.cursor()
     cur.execute(sql, row)
     conn.commit()

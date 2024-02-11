@@ -10,11 +10,11 @@ smallest_balance = 1e-12
 def balance():
     conn = create_connection()
 
-    # compute_balances(conn)
+    compute_balances(conn)
 
-    balances = get_balances_before(conn, '2024-02-04 13:00:00')
-    for i in range(100):
-        print(balances[i])
+    # balances = get_balances_before(conn, '2024-02-04 13:00:00')
+    # for i in range(100):
+    #     print(balances[i])
 
 
 def get_balances_before(conn, timestamp):
@@ -58,14 +58,21 @@ def compute_balances(conn):
     # wallet_address: [balance, total_cost_basis, remaining_cost_basis, realized_gains]
     wallets = {}
 
+    start = time.time()
     i = 0
+    print_interval = 10000
     for txn in txns:
-        if i % 10000 == 0:
-            print(f'remaining transactions to process: {len(txns) - i}')
+        if i % print_interval == 0:
+            end = time.time()
+            velocity = print_interval / (end - start)
+            estimate = str(datetime.timedelta(seconds=(len(txns) - i) / velocity))
+            print(f'remaining transactions to process: {len(txns) - i}, velocity: {"%.4f" % velocity} elements/second,'
+                  f' completion estimate: {estimate}')
+            start = time.time()
         i += 1
 
-        # 0 block_number, 1 transaction_index, 2 log_index, 3 sender, 4 recipient, 5 token_id, 6 value
-        block, _, _, sender, recipient, token_id, value = txn
+        # 0 block_number, 1 transaction_index, 2 log_index, 3 timestamp, 4 sender, 5 recipient, 6 token_id, 7 value
+        block, _, _, _, sender, recipient, token_id, value = txn
         price = time_to_price[block_times[block]] if block_times[block] >= first_price_timestamp else 0
 
         if value < smallest_balance:
@@ -74,14 +81,15 @@ def compute_balances(conn):
         update_sender(wallets, sender, value, price)
         update_recipient(wallets, recipient, value, price)
 
-        # row: wallet_address, token_address, timestamp, balance, total_cost_basis, remaining_cost_basis, realized_gains
+        # row: wallet_address, token_address, timestamp, block, balance, total_cost_basis, remaining_cost_basis,
+        #   realized_gains
         if sender != null_address:
             wallet = wallets[sender]
-            row = (sender, token_id, block_times[block], wallet[0], wallet[1], wallet[2], wallet[3])
+            row = (sender, token_id, block_times[block], block, wallet[0], wallet[1], wallet[2], wallet[3])
             insert_balance(conn, row)
         if recipient != null_address:
             wallet = wallets[recipient]
-            row = (recipient, token_id, block_times[block], wallet[0], wallet[1], wallet[2], wallet[3])
+            row = (recipient, token_id, block_times[block], block, wallet[0], wallet[1], wallet[2], wallet[3])
             insert_balance(conn, row)
 
 
