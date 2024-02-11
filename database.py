@@ -7,6 +7,7 @@ from pprint import pprint
 database_path = r"/Users/tonywang/projects/stonks/test.db"
 test_queue_path = r"/Users/tonywang/projects/stonks/test_queue.db"
 balance_queue_path = r"/Users/tonywang/projects/stonks/balance_queue.db"
+update_queue_path = r"/Users/tonywang/projects/stonks/update_queue.db"
 
 erc20_padding = 10 ** 18
 
@@ -23,12 +24,13 @@ def create_connection(db_file=database_path):
     return conn
 
 
-def create_txn_table():
+def create_transactions_table():
     # block_number, transaction_index, log_index, sender, recipient, token_id, value
     sql_create_transactions_table = """ CREATE TABLE IF NOT EXISTS transactions (
                                         block_number INTEGER NOT NULL,
                                         transaction_index INTEGER NOT NULL,
                                         log_index INTEGER NOT NULL,
+                                        timestamp TEXT NOT NULL,
                                         sender TEXT NOT NULL,
                                         recipient TEXT NOT NULL,
                                         token_id TEXT NOT NULL,
@@ -90,21 +92,19 @@ def create_table(create_sql):
     print(f'Created table with {create_sql}')
 
 
-def create_txn(log):
+def write_txn(log, block_to_time, conn):
     """
     address: token contract address
     topics: [function signature hash, sender address, recipient address]
     data: value of transfer
     """
+    block_number = log['blockNumber']
     sender = decode(['address'], log['topics'][1])[0]
     recipient = decode(['address'], log['topics'][2])[0]
     value = decode(['uint256'], log['data'])[0] / erc20_padding
-    # block_number, transaction_index, log_index, sender, recipient, token_id, value
-    return log['blockNumber'], log['transactionIndex'], log['logIndex'], sender, recipient, log['address'], value
-
-
-def write_txn(log, conn):
-    txn = create_txn(log)
+    # block_number, transaction_index, log_index, timestamp, sender, recipient, token_id, value
+    txn = (block_number, log['transactionIndex'], log['logIndex'], block_to_time[block_number], sender, recipient,
+           log['address'], value)
 
     insert_txn(conn, txn)
 
@@ -114,8 +114,8 @@ def insert_txn(conn, txn):
     Insert or replace a new txn row into the table.
     """
 
-    sql = '''INSERT OR REPLACE INTO transactions(block_number, transaction_index, log_index, sender, recipient,
-     token_id, value) VALUES(?,?,?,?,?,?,?);'''
+    sql = '''INSERT OR REPLACE INTO transactions(block_number, transaction_index, log_index, timestamp, sender,
+     recipient, token_id, value) VALUES(?,?,?,?,?,?,?,?);'''
     cur = conn.cursor()
     cur.execute(sql, txn)
     conn.commit()
@@ -155,6 +155,17 @@ def insert_balance(conn, row):
     conn.commit()
 
 
+def get_latest_block_times_block(conn):
+    cursor = conn.cursor()
+    query = f"""
+        SELECT MAX(block_number) AS latest_block_number
+        FROM block_times;
+        """
+    cursor.execute(query)
+    block_num = cursor.fetchall()
+    return block_num[0][0]
+
+
 def get_latest_transactions_block(conn, token_address):
     cursor = conn.cursor()
     query = f"""
@@ -167,20 +178,23 @@ def get_latest_transactions_block(conn, token_address):
     return block_num[0][0]
 
 
-"""
-class AckStatus(object):
-    inited = '0'        # all new entries start with 0
-    ready = '1'         # unack will revert to ready when queue is attached and ready objects will be given to consumers
-    unack = '2'         # has been given to consumer, but not acked yet
-    acked = '5'
-    ack_failed = '9'
-"""
-def attach_queue(queue='test'):
+def attach_queue(queue):
+    """
+    class AckStatus(object):
+        inited = '0'        # all new entries start with 0
+        ready = '1'         # ready objects will be given to consumers
+        unack = '2'         # has been given to a consumer, but not acked yet.
+                                unack will revert to ready when queue is attached
+        acked = '5'
+        ack_failed = '9'
+    """
     path = test_queue_path
     if queue == 'test':
         path = test_queue_path
     elif queue == 'balance':
         path = balance_queue_path
+    elif queue == 'update':
+        path = update_queue_path
     return persistqueue.UniqueAckQ(path=path, multithreading=True)
 
 

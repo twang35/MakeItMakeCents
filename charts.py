@@ -6,7 +6,8 @@ from plotly.subplots import make_subplots
 from database import *
 import time
 
-def main():
+
+def charts():
     conn = create_connection()
 
     balances = load_balances(conn)
@@ -104,4 +105,4 @@ def load_prices(conn):
     return prices
 
 
-main()
+charts()

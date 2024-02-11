@@ -7,7 +7,7 @@ null_address = '0x0000000000000000000000000000000000000000'
 smallest_balance = 1e-12
 
 
-def main():
+def balance():
     conn = create_connection()
 
     # compute_balances(conn)
@@ -183,4 +183,5 @@ def to_prices_map(prices_rows):
     return time_to_price, prices_rows[0][1]
 
 
-main()
+if __name__ == "__main__":
+    balance()

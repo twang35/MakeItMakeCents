@@ -9,7 +9,7 @@ with open('transpose_key.txt', 'r') as f:
     transpose_key = f.read()
 
 
-def main():
+def price():
     # sql query can only return 3000 rows at a time (50 hrs)
     # add 48 hr blocks to queue and query for 48 hrs at a time
     prices = get_prices(
@@ -63,4 +63,5 @@ def get_prices(token_address, start, end):
     return prices
 
 
-main()
+if __name__ == "__main__":
+    price()
