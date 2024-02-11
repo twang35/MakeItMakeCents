@@ -12,7 +12,7 @@ def main():
 
     # compute_balances(conn)
 
-    balances = get_balances_before(conn, '2024-02-01 13:00:00')
+    balances = get_balances_before(conn, '2024-02-04 13:00:00')
     for i in range(100):
         print(balances[i])
 
@@ -99,7 +99,7 @@ def update_sender(wallets, sender, value, price):
     # update balance
     wallets[sender][0] -= value
     # update realized gain
-    wallets[sender][3] += price * value
+    wallets[sender][3] += price * value - cost_sent
 
 
 def update_recipient(wallets, recipient, value, price):
@@ -123,6 +123,7 @@ def update_recipient(wallets, recipient, value, price):
 def load_data(cursor):
     query = """
         SELECT * FROM transactions
+        WHERE block_number < 19171614
         ORDER BY block_number, log_index;
         """
     cursor.execute(query)

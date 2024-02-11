@@ -52,16 +52,16 @@ def load_balances(conn):
         FROM 
             balances
         WHERE 
-            wallet_address in ('0x8f413ad1f9517d82f9eb3a18b2a1f5ee1a68e5a0', 
-                                '0x28c6c06298d514db089934071355e5743bf21d60', 
-                                '0xbd513f67ed9bccc8364176e8b97bb93a5030e777', 
-                                '0xb7e746ff79cb76e2ec804698061aed9ca6c922ea', 
-                                '0x0d0707963952f2fba59dd06f2b425ace40b492fe', 
-                                '0x98c3d3183c4b8a650614ad179a1a98be0a8d6b8e', 
-                                '0xdfd5293d8e347dfe59e90efd55b2956a1343963d', 
-                                '0x56fc565c9c3c176051939f399131adde005933f4', 
-                                '0x21a31ee1afc51d94c2efccaa2092ad1028285549', 
-                                '0x75e89d5979e4f6fba9f97c104c2f0afb3f1dcb88')
+            wallet_address in ('0xbd513f67ed9bccc8364176e8b97bb93a5030e777',
+                                '0x28c6c06298d514db089934071355e5743bf21d60',
+                                '0xdfd5293d8e347dfe59e90efd55b2956a1343963d',
+                                '0x21a31ee1afc51d94c2efccaa2092ad1028285549',
+                                '0x0d4d42969105e5a144a2538aeb24a2e16be40e34',
+                                '0xc882b111a75c0c657fc507c04fbfcd2cc984f071',
+                                '0xecd3b4b7fd0bc9f52335f29a3e007453de07d2b9',
+                                '0x58edf78281334335effa23101bbe3371b6a36a51',
+                                '0x0d0707963952f2fba59dd06f2b425ace40b492fe',
+                                '0xfcc43eb62b4da4bc5d2260721a497c4693e59a70')
         ORDER BY
             timestamp;
         """
