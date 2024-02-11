@@ -11,7 +11,7 @@ with open('transpose_key.txt', 'r') as f:
 ankr_endpoint = 'https://rpc.ankr.com/eth'  # url string
 # Web3.utils.keccak256("Transfer(address,address,uint256)")
 transfer_function_hash = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
-token_address = '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB'  # AltLayer Token (ALT)
+altlayer_token_address = '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB'  # AltLayer Token (ALT)
 
 batch_block_time_increment = 5000
 batch_txn_logs_increment = 100
@@ -31,8 +31,8 @@ def main():
     process_blocks(table='transactions')
 
 
-def process_blocks(table='transactions'):
-    q = attach_queue()
+def process_blocks(queue='test', table='transactions', token_address=altlayer_token_address):
+    q = attach_queue(queue=queue)
     conn = create_connection()
     web3 = Web3(HTTPProvider(ankr_endpoint))
     i = 0
@@ -52,7 +52,7 @@ def process_blocks(table='transactions'):
 
         item = q.get()
         if table == 'transactions':
-            process_txn_block(item, conn, web3)
+            process_txn_block(item, conn, web3, token_address, batch_txn_logs_increment)
         elif table == 'block_times':
             # process_block_times_block(item, conn, web3)
             process_batch_block_times(item, conn)
@@ -60,10 +60,10 @@ def process_blocks(table='transactions'):
         q.ack(item)
 
 
-def process_txn_block(block, conn, web3):
+def process_txn_block(block, conn, web3, token_address, block_num_increment):
     matching_logs = web3.eth.get_logs({
         'fromBlock': block,
-        'toBlock': block + batch_txn_logs_increment,
+        'toBlock': block + block_num_increment,
         'topics': [transfer_function_hash],
         'address': token_address,
     })

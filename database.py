@@ -155,6 +155,18 @@ def insert_balance(conn, row):
     conn.commit()
 
 
+def get_latest_transactions_block(conn, token_address):
+    cursor = conn.cursor()
+    query = f"""
+        SELECT MAX(block_number) AS latest_block_number
+        FROM transactions
+        WHERE token_id = '{token_address}';
+        """
+    cursor.execute(query)
+    block_num = cursor.fetchall()
+    return block_num[0][0]
+
+
 """
 class AckStatus(object):
     inited = '0'        # all new entries start with 0
