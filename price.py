@@ -9,25 +9,23 @@ import datetime
 with open('transpose_key.txt', 'r') as f:
     transpose_key = f.read()
 
+# sql query can only return 3000 rows at a time (50 hrs)
+# add 48 hr blocks to queue (2880 rows)
 batch_price_date_increment = datetime.timedelta(days=2)
 
 
 def price():
-    only_print_queue()
     conn = create_connection()
-    # sql query can only return 3000 rows at a time (50 hrs)
-    # add 48 hr blocks to queue (2880 rows)
-    add_items_to_queue(
-        start=datetime.datetime.fromisoformat('2024-02-03 20:26:00'),
-        end=datetime.datetime.utcnow(),
-        increment=batch_price_date_increment
-    )
-    # process_dates('0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB', 'test')
-    # prices = get_prices(
-    #     token_address='0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB',
-    #     # start='2024-01-24 21:46:00', end='2024-02-15 09:15:36')
+    # add_items_to_queue(
     #     start=datetime.datetime.fromisoformat('2024-02-03 20:26:00'),
-    #     end=datetime.datetime.fromisoformat('2024-02-15 09:15:36'))
+    #     end=datetime.datetime.utcnow(),
+    #     increment=batch_price_date_increment
+    # )
+    prices = get_prices(
+        token_address='0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB',
+        # start='2024-01-24 21:46:00', end='2024-02-15 09:15:36')
+        start=datetime.datetime.fromisoformat('2024-02-03 20:26:00'),
+        end=datetime.datetime.fromisoformat('2024-02-03 21:15:36'))
     # process_prices(prices, conn)
 
 
@@ -84,12 +82,11 @@ def get_prices(token_address, start, end):
         'Content-Type': 'application/json',
         'X-API-KEY': transpose_key,
     }
-    response = requests.post(url,
-        headers=headers,
-        json={
-            'sql': sql_query,
-        },
-    )
+    response = requests.post(url, headers=headers, json={'sql': sql_query})
+
+    if response.status_code != 200:
+        # retry once
+        response = requests.post(url, headers=headers, json={'sql': sql_query})
 
     prices = response.json()['results']
     print('Transpose credits charged:', response.headers.get('X-Credits-Charged', None))
