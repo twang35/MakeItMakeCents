@@ -16,7 +16,7 @@ def main():
     web3 = Web3(HTTPProvider('https://rpc.ankr.com/eth'))
 
     # add to balance queue
-    add_blocks_for_processing(start=2430001, end=2430100, queue='balance')
+    add_items_to_queue(start=2430001, end=2430100, queue='balance')
 
     queue = attach_queue('balance')
     start = time.time()
