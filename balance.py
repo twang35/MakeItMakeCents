@@ -10,7 +10,8 @@ smallest_balance = 1e-12
 def balance():
     conn = create_connection()
 
-    compute_balances(conn)
+    altlayer_token_address = '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB'
+    compute_balances(conn, altlayer_token_address)
 
     # balances = get_balances_before(conn, '2024-02-04 13:00:00')
     # for i in range(100):
@@ -51,12 +52,20 @@ def get_balances_before(conn, timestamp):
     return balances
 
 
-def compute_balances(conn):
+def compute_balances(conn, token_address, latest_block=0):
+    latest_block = get_latest_balances_block(conn, token_address)
+    latest_block = 0 if latest_block is None else latest_block
+
     cursor = conn.cursor()
-    txns, block_times, time_to_price, first_price_timestamp = load_data(cursor)
+    txns, block_times, time_to_price, first_price_timestamp = load_data(cursor=cursor,
+                                                                        token_address=token_address,
+                                                                        latest_block=latest_block)
 
     # wallet_address: [balance, total_cost_basis, remaining_cost_basis, realized_gains]
     wallets = {}
+    if latest_block != 0:
+        # load the existing wallets from the balances table
+        wallets = build_wallets(get_latest_wallet_balances(conn, token_address))
 
     start = time.time()
     i = 0
@@ -93,6 +102,16 @@ def compute_balances(conn):
             insert_balance(conn, row)
 
 
+def build_wallets(balances_rows):
+    # wallet_address: [balance, total_cost_basis, remaining_cost_basis, realized_gains]
+    wallets = {}
+    for row in balances_rows:
+        wallet_address, token_balance, total_cost_basis, remaining_cost_basis, realized_gains, _ = row
+        wallets[wallet_address] = [token_balance, total_cost_basis, remaining_cost_basis, realized_gains]
+
+    return wallets
+
+
 def update_sender(wallets, sender, value, price):
     if sender == null_address:
         # do not subtract
@@ -102,12 +121,15 @@ def update_sender(wallets, sender, value, price):
     # wallet_address: [balance, total_cost_basis, remaining_cost_basis, realized_gains]
 
     # update remaining cost basis
-    cost_sent = value / wallets[sender][0] * wallets[sender][2]
-    wallets[sender][2] -= cost_sent
-    # update balance
-    wallets[sender][0] -= value
-    # update realized gain
-    wallets[sender][3] += price * value - cost_sent
+    try:
+        cost_sent = value / wallets[sender][0] * wallets[sender][2]
+        wallets[sender][2] -= cost_sent
+        # update balance
+        wallets[sender][0] -= value
+        # update realized gain
+        wallets[sender][3] += price * value - cost_sent
+    except:
+        print('caught an exception')
 
 
 def update_recipient(wallets, recipient, value, price):
@@ -128,32 +150,32 @@ def update_recipient(wallets, recipient, value, price):
     wallets[recipient][2] += price * value
 
 
-def load_data(cursor):
-    query = """
+def load_data(cursor, token_address, latest_block):
+    query = f"""
         SELECT * FROM transactions
-        WHERE block_number < 19171614
+        WHERE block_number > {latest_block} and token_address = '{token_address}'
         ORDER BY block_number, log_index;
         """
     cursor.execute(query)
     txns = cursor.fetchall()
-    print("Total transactions rows are:  ", len(txns))
+    print("Total transactions rows are: ", len(txns))
 
     query = """
         SELECT * FROM block_times;
         """
     cursor.execute(query)
     block_times_rows = cursor.fetchall()
-    print("Total block_times rows are:  ", len(block_times_rows))
+    print("Total block_times rows are: ", len(block_times_rows))
     block_times = to_block_times_map(block_times_rows)
 
-    query = """
+    query = f"""
         SELECT * FROM prices
-        where token_address='0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB'
+        where token_address='{token_address}'
         ORDER by timestamp;
         """
     cursor.execute(query)
     prices_rows = cursor.fetchall()
-    print("Total prices rows are:  ", len(prices_rows))
+    print("Total prices rows are: ", len(prices_rows))
     time_to_price, first_price_timestamp = to_prices_map(prices_rows)
 
     return txns, block_times, time_to_price, first_price_timestamp
@@ -176,13 +198,13 @@ def to_prices_map(prices_rows):
     for row in prices_rows:
         time_to_price[row[1]] = row[3]
 
-    # replace missing times with last price  #######################
     cur_time = datetime.datetime.fromisoformat(prices_rows[0][1])
     last_time = datetime.datetime.utcnow()
 
     last_price = time_to_price[str(cur_time)]
 
     while cur_time < last_time:
+        # replace missing times with last price
         if str(cur_time) not in time_to_price:
             time_to_price[str(cur_time)] = last_price
         else:

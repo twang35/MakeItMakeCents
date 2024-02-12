@@ -5,6 +5,7 @@ from web3 import Web3, HTTPProvider
 from pprint import pprint
 import datetime
 
+from balance import compute_balances
 from database import *
 from blockchain import ankr_endpoint, process_blocks, batch_block_time_increment, batch_txn_logs_increment
 from price import batch_price_date_increment, process_price_dates
@@ -51,6 +52,7 @@ def update():
     print('=== completed updating prices =========')
 
     # update balances
+    compute_balances(conn, altlayer_token_address)
 
 
 if __name__ == "__main__":

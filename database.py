@@ -4,6 +4,7 @@ from sqlite3 import Error
 import persistqueue
 from eth_abi import decode
 from pprint import pprint
+import time
 
 database_path = r"/Users/tonywang/projects/stonks/test.db"
 test_queue_path = r"/Users/tonywang/projects/stonks/test_queue.db"
@@ -42,7 +43,7 @@ def create_transactions_table():
     create_table(sql_create_transactions_table)
 
 
-def create_block_time_table():
+def create_block_times_table():
     # PRIMARY(block_number, timestamp, epoch_seconds)
     sql_create_block_table = """ CREATE TABLE IF NOT EXISTS block_times (
                                         block_number INTEGER NOT NULL,
@@ -54,7 +55,7 @@ def create_block_time_table():
     create_table(sql_create_block_table)
 
 
-def create_price_table():
+def create_prices_table():
     # PRIMARY(token_address, timestamp), token_symbol, price, volume
     sql_create_price_table = """ CREATE TABLE IF NOT EXISTS prices (
                                         token_address TEXT NOT NULL,
@@ -68,10 +69,10 @@ def create_price_table():
     create_table(sql_create_price_table)
 
 
-def create_balance_table():
+def create_balances_table():
     # PRIMARY(wallet_address, token_address, timestamp),
     #   balance, total_cost_basis, remaining_cost_basis, realized_gains, unrealized_gains
-    sql_create_price_table = """ CREATE TABLE IF NOT EXISTS balances (
+    sql_create_balances_table = """ CREATE TABLE IF NOT EXISTS balances (
                                         wallet_address TEXT NOT NULL,
                                         token_address TEXT NOT NULL,
                                         timestamp TEXT NOT NULL,
@@ -83,7 +84,25 @@ def create_balance_table():
                                         PRIMARY KEY (wallet_address, token_address, timestamp, block_number)
                                         ); """
 
-    create_table(sql_create_price_table)
+    create_table(sql_create_balances_table)
+
+
+def create_balances_test_table():
+    # PRIMARY(wallet_address, token_address, timestamp),
+    #   balance, total_cost_basis, remaining_cost_basis, realized_gains, unrealized_gains
+    sql_create_test_table = """ CREATE TABLE IF NOT EXISTS balances_test (
+                                        wallet_address TEXT NOT NULL,
+                                        token_address TEXT NOT NULL,
+                                        timestamp TEXT NOT NULL,
+                                        block_number INTEGER NOT NULL,
+                                        balance REAL NOT NULL,
+                                        total_cost_basis REAL NOT NULL,
+                                        remaining_cost_basis REAL NOT NULL,
+                                        realized_gains REAL NOT NULL,
+                                        PRIMARY KEY (wallet_address, token_address, timestamp, block_number)
+                                        ); """
+
+    create_table(sql_create_test_table)
 
 
 def create_table(create_sql):
@@ -164,6 +183,18 @@ def get_latest_transactions_block(conn, token_address):
     return result[0][0]
 
 
+def get_latest_balances_block(conn, token_address):
+    cursor = conn.cursor()
+    query = f"""
+        SELECT MAX(block_number) AS latest_block_number
+        FROM balances
+        WHERE token_address = '{token_address}';
+        """
+    cursor.execute(query)
+    result = cursor.fetchall()
+    return result[0][0]
+
+
 def get_latest_price_timestamp(conn, token_address):
     cursor = conn.cursor()
     query = f"""
@@ -174,6 +205,36 @@ def get_latest_price_timestamp(conn, token_address):
     cursor.execute(query)
     result = cursor.fetchall()
     return datetime.datetime.fromisoformat(result[0][0])
+
+
+def get_latest_wallet_balances(conn, token_address):
+    cursor = conn.cursor()
+
+    start_time = time.time()
+    query = f"""
+        SELECT 
+            *
+        FROM (
+            SELECT 
+                wallet_address, 
+                balance,
+                total_cost_basis,
+                remaining_cost_basis,
+                realized_gains,
+                ROW_NUMBER() OVER (PARTITION BY wallet_address ORDER BY block_number DESC) AS row_num
+            FROM 
+                balances
+            WHERE 
+                token_address = '{token_address}'
+        ) AS ranked
+        WHERE 
+            row_num = 1;
+        """
+    cursor.execute(query)
+    balances = cursor.fetchall()
+    print("Total unique wallets are: ", len(balances))
+    print(f'query time: {time.time() - start_time}')
+    return balances
 
 
 def attach_queue(queue):
