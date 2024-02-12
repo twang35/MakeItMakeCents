@@ -178,7 +178,7 @@ def to_prices_map(prices_rows):
 
     # replace missing times with last price  #######################
     cur_time = datetime.datetime.fromisoformat(prices_rows[0][1])
-    last_time = datetime.datetime.fromisoformat(prices_rows[-1][1])
+    last_time = datetime.datetime.utcnow()
 
     last_price = time_to_price[str(cur_time)]
 
@@ -188,6 +188,8 @@ def to_prices_map(prices_rows):
         else:
             last_price = time_to_price[str(cur_time)]
         cur_time += datetime.timedelta(seconds=60)
+
+    # time_to_price map, first timestamp that has price data
     return time_to_price, prices_rows[0][1]
 
 

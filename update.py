@@ -15,6 +15,7 @@ altlayer_token_address = '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB'
 def update():
     # only_print_queue(queue='update')
 
+    # starting from None queries the database for the latest location to start updating
     # start_block = 18937380
     start_block = None
     # start_time = datetime.datetime.fromisoformat('2024-02-03 20:26:00')
