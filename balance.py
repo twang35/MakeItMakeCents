@@ -7,7 +7,7 @@ null_address = '0x0000000000000000000000000000000000000000'
 smallest_balance = 1e-12
 
 
-def balance():
+def run_balance():
     conn = create_connection()
 
     # altlayer_token_address = '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB'
@@ -94,12 +94,14 @@ def compute_balances(conn, token_address):
         # row: wallet_address, token_address, timestamp, block, balance, total_cost_basis, remaining_cost_basis,
         #   realized_gains
         if sender != null_address:
-            wallet = wallets[sender]
-            row = (sender, token_id, block_times[block], block, wallet[0], wallet[1], wallet[2], wallet[3])
+            balance, total_cost_basis, remaining_cost_basis, realized_gains = wallets[sender]
+            row = (sender, token_id, block_times[block], block,
+                   balance, total_cost_basis, remaining_cost_basis, realized_gains)
             insert_balance(conn, row)
         if recipient != null_address:
-            wallet = wallets[recipient]
-            row = (recipient, token_id, block_times[block], block, wallet[0], wallet[1], wallet[2], wallet[3])
+            balance, total_cost_basis, remaining_cost_basis, realized_gains = wallets[recipient]
+            row = (recipient, token_id, block_times[block], block,
+                   balance, total_cost_basis, remaining_cost_basis, realized_gains)
             insert_balance(conn, row)
 
 
@@ -220,4 +222,4 @@ def to_prices_map(prices_rows):
 
 
 if __name__ == "__main__":
-    balance()
+    run_balance()
