@@ -10,10 +10,11 @@ smallest_balance = 1e-12
 def run_balance():
     conn = create_connection()
 
-    # altlayer_token_address = '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB'
-    # compute_balances(conn, altlayer_token_address)
+    altlayer_token_address = '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB'
+    compute_balances(conn, altlayer_token_address)
 
-    balances = get_balances_before(conn, '2024-02-14 13:00:00')
+    # balances = get_balances_before(conn, '2024-02-14 13:00:00')
+    balances = get_balances_before(conn, datetime.datetime.utcnow())
     for i in range(100):
         print(balances[i])
 
@@ -34,7 +35,7 @@ def get_balances_before(conn, timestamp):
                 total_cost_basis,
                 remaining_cost_basis,
                 realized_gains,
-                ROW_NUMBER() OVER (PARTITION BY wallet_address ORDER BY timestamp DESC) AS row_num
+                ROW_NUMBER() OVER (PARTITION BY wallet_address ORDER BY block_number DESC) AS row_num
             FROM 
                 balances
             WHERE 
@@ -132,7 +133,9 @@ def update_sender(wallets, sender, value, price, txn):
         # update realized gain
         wallets[sender][3] += price * value - cost_sent
     except:
-        print(f'caught an exception: {txn}')
+        print(f'\ncaught an exception:\n'
+              f'txn row: block_number, transaction_index, log_index, timestamp, sender, recipient, token_address, value'
+              f'\n{txn}\n')
         raise
 
 

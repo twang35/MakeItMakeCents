@@ -53,6 +53,7 @@ def update():
 
     # update balances
     compute_balances(conn, altlayer_token_address)
+    print('=== completed updating balances =========')
 
 
 if __name__ == "__main__":
