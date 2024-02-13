@@ -10,12 +10,12 @@ smallest_balance = 1e-12
 def balance():
     conn = create_connection()
 
-    altlayer_token_address = '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB'
-    compute_balances(conn, altlayer_token_address)
+    # altlayer_token_address = '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB'
+    # compute_balances(conn, altlayer_token_address)
 
-    # balances = get_balances_before(conn, '2024-02-04 13:00:00')
-    # for i in range(100):
-    #     print(balances[i])
+    balances = get_balances_before(conn, '2024-02-14 13:00:00')
+    for i in range(100):
+        print(balances[i])
 
 
 def get_balances_before(conn, timestamp):
@@ -52,7 +52,8 @@ def get_balances_before(conn, timestamp):
     return balances
 
 
-def compute_balances(conn, token_address, latest_block=0):
+def compute_balances(conn, token_address):
+    # compute from the latest block in the balances table or start computing from the earliest txn
     latest_block = get_latest_balances_block(conn, token_address)
     latest_block = 0 if latest_block is None else latest_block
 
@@ -87,7 +88,7 @@ def compute_balances(conn, token_address, latest_block=0):
         if value < smallest_balance:
             continue
 
-        update_sender(wallets, sender, value, price)
+        update_sender(wallets, sender, value, price, txn)
         update_recipient(wallets, recipient, value, price)
 
         # row: wallet_address, token_address, timestamp, block, balance, total_cost_basis, remaining_cost_basis,
@@ -112,7 +113,7 @@ def build_wallets(balances_rows):
     return wallets
 
 
-def update_sender(wallets, sender, value, price):
+def update_sender(wallets, sender, value, price, txn):
     if sender == null_address:
         # do not subtract
         print(f'null address generated: {value}')
@@ -129,7 +130,8 @@ def update_sender(wallets, sender, value, price):
         # update realized gain
         wallets[sender][3] += price * value - cost_sent
     except:
-        print('caught an exception')
+        print(f'caught an exception: {txn}')
+        raise
 
 
 def update_recipient(wallets, recipient, value, price):
@@ -151,6 +153,8 @@ def update_recipient(wallets, recipient, value, price):
 
 
 def load_data(cursor, token_address, latest_block):
+    print(f"Loading for token_address {token_address} after block {latest_block}")
+
     query = f"""
         SELECT * FROM transactions
         WHERE block_number > {latest_block} and token_address = '{token_address}'

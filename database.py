@@ -87,24 +87,6 @@ def create_balances_table():
     create_table(sql_create_balances_table)
 
 
-def create_balances_test_table():
-    # PRIMARY(wallet_address, token_address, timestamp),
-    #   balance, total_cost_basis, remaining_cost_basis, realized_gains, unrealized_gains
-    sql_create_test_table = """ CREATE TABLE IF NOT EXISTS balances_test (
-                                        wallet_address TEXT NOT NULL,
-                                        token_address TEXT NOT NULL,
-                                        timestamp TEXT NOT NULL,
-                                        block_number INTEGER NOT NULL,
-                                        balance REAL NOT NULL,
-                                        total_cost_basis REAL NOT NULL,
-                                        remaining_cost_basis REAL NOT NULL,
-                                        realized_gains REAL NOT NULL,
-                                        PRIMARY KEY (wallet_address, token_address, timestamp, block_number)
-                                        ); """
-
-    create_table(sql_create_test_table)
-
-
 def create_table(create_sql):
     conn = create_connection()
     c = conn.cursor()
