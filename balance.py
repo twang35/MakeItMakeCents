@@ -20,12 +20,12 @@ def run_balance():
 
     start = time.time()
     for i in range(10):
-        balances = get_balances_before(conn, datetime.datetime.utcnow())
+        balances = get_balances_before(conn, datetime.datetime.utcnow(), altlayer_token_address)
     end = time.time()
     print(f'total time = {end-start}, avg: {(end-start)/10}')
 
 
-def get_balances_before(conn, timestamp):
+def get_balances_before(conn, timestamp, token_address):
     cursor = conn.cursor()
 
     start_time = time.time()
@@ -46,6 +46,7 @@ def get_balances_before(conn, timestamp):
                 balances
             WHERE 
                 timestamp <= '{timestamp}'
+                AND token_address = '{token_address}'
         ) AS ranked
         WHERE 
             row_num = 1
@@ -92,7 +93,9 @@ def compute_balances(conn, token_address):
         block, _, _, _, sender, recipient, token_id, value = txn
         price = time_to_price[block_times[block]] if block_times[block] >= first_price_timestamp else 0
 
-        if value < smallest_balance:
+        if value < smallest_balance or (wallets[sender][0] == 0 and value < 1):
+            # don't count if value is too small
+            # or if wallet has 0 balance due to SQLite REAL number precision being too low
             continue
 
         update_sender(wallets, sender, value, price, txn)
