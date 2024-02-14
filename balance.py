@@ -14,9 +14,15 @@ def run_balance():
     compute_balances(conn, altlayer_token_address)
 
     # balances = get_balances_before(conn, '2024-02-14 13:00:00')
-    balances = get_balances_before(conn, datetime.datetime.utcnow())
-    for i in range(100):
-        print(balances[i])
+    # balances = get_balances_before(conn, datetime.datetime.utcnow())
+    # for i in range(100):
+    #     print(balances[i])
+
+    start = time.time()
+    for i in range(10):
+        balances = get_balances_before(conn, datetime.datetime.utcnow())
+    end = time.time()
+    print(f'total time = {end-start}, avg: {(end-start)/10}')
 
 
 def get_balances_before(conn, timestamp):

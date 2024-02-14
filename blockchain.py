@@ -23,10 +23,10 @@ def blockchain():
 
     # transactions: start=19082604, end=19152064
     # transactions: start=18937380, end=19082604, 401071 txns before, 402644 after
-    # add_items_for_processing(start=19082604, end=19082604, queue='test')
+    # add_items_to_queue(start=18937380, end=19082604, queue='test', increment=batch_txn_logs_increment)
 
     # block_time:   start=16300000, end=19166426 batch
-    # add_items_for_processing(start=18937380, end=19082604, queue='test', increment=batch_txn_logs_increment)
+    # add_items_to_queue(start=19082604, end=19082604, queue='test')
 
     # table: transactions, block_times
     process_blocks(queue='test', table='transactions', max_block_num=19202534)
