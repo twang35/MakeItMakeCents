@@ -13,6 +13,9 @@ update_queue_path = r"/Users/tonywang/projects/stonks/update_queue.db"
 
 erc20_padding = 10 ** 18
 
+altlayer_token_address = '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB'
+pepefork_token_address = '0xb9f599ce614Feb2e1BBe58F180F370D05b39344E'
+
 
 def create_connection(db_file=database_path):
     """ create a database connection to a SQLite database """

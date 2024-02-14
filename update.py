@@ -10,9 +10,6 @@ from database import *
 from blockchain import ankr_endpoint, process_blocks, batch_block_time_increment, batch_txn_logs_increment
 from price import batch_price_date_increment, process_price_dates
 
-altlayer_token_address = '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB'
-pepefork_token_address = '0xb9f599ce614Feb2e1BBe58F180F370D05b39344E'
-
 
 def update():
     # only_print_queue(queue='update')

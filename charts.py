@@ -10,9 +10,9 @@ import time
 def charts():
     conn = create_connection()
 
-    balances = load_balances(conn)
+    balances = load_balances(conn, altlayer_token_address)
     balances_map = compute_balances_map(balances)
-    prices = load_prices(conn)
+    prices = load_prices(conn, altlayer_token_address)
 
     # 0 price, 1 timestamp
     prices_y = [row[0] for row in prices]
@@ -38,7 +38,7 @@ def charts():
     fig.show()
 
 
-def load_balances(conn):
+def load_balances(conn, token_address):
     cursor = conn.cursor()
 
     start_time = time.time()
@@ -63,6 +63,7 @@ def load_balances(conn):
                                 '0x58edf78281334335effa23101bbe3371b6a36a51',
                                 '0x0d0707963952f2fba59dd06f2b425ace40b492fe',
                                 '0xfcc43eb62b4da4bc5d2260721a497c4693e59a70')
+            AND token_address='{token_address}'
         ORDER BY
             timestamp;
         """
@@ -85,7 +86,7 @@ def compute_balances_map(balances):
     return balances_map
 
 
-def load_prices(conn):
+def load_prices(conn, token_address):
     cursor = conn.cursor()
 
     start_time = time.time()
@@ -95,6 +96,8 @@ def load_prices(conn):
             timestamp
         FROM 
             prices
+        WHERE
+            token_address='{token_address}'
         ORDER BY
             timestamp;
         """
