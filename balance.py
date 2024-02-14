@@ -10,19 +10,24 @@ smallest_balance = 1e-12
 def run_balance():
     conn = create_connection()
 
-    altlayer_token_address = '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB'
-    compute_balances(conn, altlayer_token_address)
+    # altlayer_token_address = '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB'
+    # compute_balances(conn, altlayer_token_address)
 
     # balances = get_balances_before(conn, '2024-02-14 13:00:00')
     # balances = get_balances_before(conn, datetime.datetime.utcnow())
     # for i in range(100):
     #     print(balances[i])
 
-    start = time.time()
-    for i in range(10):
-        balances = get_balances_before(conn, datetime.datetime.utcnow(), altlayer_token_address)
-    end = time.time()
-    print(f'total time = {end-start}, avg: {(end-start)/10}')
+    big_num = 1234567.1234567897
+    row = ('test_wallet_address', 'test_token_id', 'block_times[block]', 1234,
+           big_num, 0, 0, 0)
+    insert_balance(conn, row)
+    query = 'select balance from balances where wallet_address="test_wallet_address";'
+    cursor = conn.cursor()
+    cursor.execute(query)
+    result = cursor.fetchall()
+    retrieved_balance = result[0][0]
+    print(retrieved_balance -0)
 
 
 def get_balances_before(conn, timestamp, token_address):
