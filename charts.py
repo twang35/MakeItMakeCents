@@ -16,21 +16,19 @@ def charts():
     conn = create_connection()
     cursor = conn.cursor()
 
-    token_address = altlayer_token_address
-    # token_address = pepefork_token_address
+    # token_address = altlayer_token_address
+    token_address = pepefork_token_address
 
-    balances_rows = get_largest_balances(cursor, token_address)
-    balances_map = compute_balances_map(balances_rows)
+    # 'balance', 'remaining_cost_basis', 'realized_gains'
+    balances_column = 'realized_gains'
+    balances_rows = get_largest_balances(cursor, token_address, balances_column)
+    balances_map = compute_balances_map(balances_rows, balances_column)
     prices = load_prices(cursor, token_address)
 
-    create_realized_gains_graph(prices, balances_map)
+    create_balances_and_price_graph(prices, balances_map, balances_column)
 
 
-def create_realized_gains_graph(prices, balances_map):
-    # 0 price, 1 timestamp
-    prices_y = [row[0] for row in prices]
-    prices_timestamp = [row[1] for row in prices]
-
+def create_balances_and_price_graph(prices, balances_map, balances_column):
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
     for address in balances_map.keys():
@@ -40,24 +38,41 @@ def create_realized_gains_graph(prices, balances_map):
             secondary_y=False,
         )
 
+    add_price_trace(prices, fig)
+
+    # Set y-axes titles
+    fig.update_yaxes(title_text=balances_column, secondary_y=False)
+    fig.update_yaxes(title_text="price", secondary_y=True)
+    fig.show()
+
+
+def add_price_trace(prices, fig):
+    # 0 price, 1 timestamp
+    prices_y = [row[0] for row in prices]
+    prices_timestamp = [row[1] for row in prices]
+
     fig.add_trace(
         go.Scatter(x=prices_timestamp, y=prices_y, name="price"),
         secondary_y=True,
     )
 
-    # Set y-axes titles
-    fig.update_yaxes(title_text="realized gains", secondary_y=False)
-    fig.update_yaxes(title_text="price", secondary_y=True)
-    fig.show()
 
-
-def compute_balances_map(balances_rows):
+def compute_balances_map(balances_rows, balances_column):
     # 0 wallet_address, 1 timestamp, 2 balance, 3 total_cost_basis, 4 remaining_cost_basis, 5 realized_gains
     balances_map = {}
     for row in balances_rows:
         if row[0] not in balances_map:
             balances_map[row[0]] = [[], []]
-        balances_map[row[0]][0].append(row[5])  # realized_gains
+        column_value = ""
+        if balances_column == 'realized_gains':
+            column_value = row[5]
+        elif balances_column == 'remaining_cost_basis':
+            column_value = row[4]
+        elif balances_column == 'total_cost_basis':
+            column_value = row[3]
+        elif balances_column == 'balance':
+            column_value = row[2]
+        balances_map[row[0]][0].append(column_value)
         balances_map[row[0]][1].append(row[1])  # timestamp
 
     return balances_map
@@ -83,12 +98,12 @@ def load_prices(cursor, token_address):
     return prices
 
 
-def get_largest_balances(cursor, token_address):
-    largest_wallets = get_largest_wallets(cursor, token_address)
+def get_largest_balances(cursor, token_address, balances_column):
+    largest_wallets = get_largest_column_wallets(cursor, token_address, balances_column)
     return load_balances(cursor, token_address, largest_wallets)
 
 
-def get_largest_wallets(cursor, token_address):
+def get_largest_column_wallets(cursor, token_address, balances_column):
     start_time = time.time()
     find_largest_wallets_query = f"""
         SELECT * 
@@ -103,7 +118,7 @@ def get_largest_wallets(cursor, token_address):
               ROW_NUMBER() OVER (
                 PARTITION BY wallet_address 
                 ORDER BY 
-                  block_number DESC
+                  {balances_column} DESC
               ) AS row_num 
             FROM 
               balances 
@@ -114,12 +129,12 @@ def get_largest_wallets(cursor, token_address):
         WHERE 
             row_num = 1 
         ORDER BY 
-            realized_gains DESC
+          {balances_column} DESC
         LIMIT 15;
         """
     cursor.execute(find_largest_wallets_query)
     largest_wallets_rows = cursor.fetchall()
-    print(f'find_largest_wallets time: {time.time() - start_time}')
+    print(f'get_largest_realized_gains_wallets time: {time.time() - start_time}')
     return [row[0] for row in largest_wallets_rows]
 
 
