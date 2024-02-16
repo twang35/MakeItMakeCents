@@ -13,16 +13,16 @@ filter_out_addresses = [
 
 
 def charts():
+    token = 'pepefork'
+    # token = 'altlayer'
+    # 'balance', 'remaining_cost_basis', 'realized_gains'
+    balances_column = 'balance'
+
     conn = create_connection()
     cursor = conn.cursor()
 
-    token = 'pepefork'
-    # token_address = altlayer_token_address
     token_address = token_addresses[token]
-
-    # 'balance', 'remaining_cost_basis', 'realized_gains'
-    balances_column = 'remaining_cost_basis'
-    balances_rows = get_largest_balances(cursor, token_address, balances_column)
+    balances_rows = get_largest_balances(cursor, token_address, balances_column, after_timestamp='2024-02-11 10:00:00')
     balances_map = compute_balances_map(balances_rows, balances_column)
     prices = load_prices(cursor, token_address)
 
@@ -102,13 +102,14 @@ def load_prices(cursor, token_address):
     return prices
 
 
-def get_largest_balances(cursor, token_address, balances_column):
-    largest_wallets = get_largest_column_wallets(cursor, token_address, balances_column)
+def get_largest_balances(cursor, token_address, balances_column, after_timestamp=None):
+    largest_wallets = get_largest_column_wallets(cursor, token_address, balances_column, after_timestamp)
     return load_balances(cursor, token_address, largest_wallets)
 
 
-def get_largest_column_wallets(cursor, token_address, balances_column):
+def get_largest_column_wallets(cursor, token_address, balances_column, after_timestamp=None):
     start_time = time.time()
+    after_timestamp_string = '' if after_timestamp is None else f"AND timestamp >= '{after_timestamp}'"
     find_largest_wallets_query = f"""
         SELECT * 
         FROM (
@@ -129,6 +130,7 @@ def get_largest_column_wallets(cursor, token_address, balances_column):
             WHERE 
               token_address = '{token_address}'
               AND wallet_address NOT IN ({to_sql_collection_string(filter_out_addresses)})
+              {after_timestamp_string}
         ) AS ranked 
         WHERE 
             row_num = 1 
