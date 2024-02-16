@@ -19,7 +19,7 @@ def update():
     web3 = Web3(HTTPProvider(ankr_endpoint))
     latest_finalized_block = web3.eth.get_block(block_identifier='finalized')['number']
 
-    token_address = pepefork_token_address
+    token_address = token_addresses['pepefork']
 
     # start_txn_block = 19107504  # pepe fork started at 19117504
     # start_price_time = datetime.datetime.fromisoformat('2024-01-28 08:45:59')

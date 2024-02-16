@@ -16,20 +16,24 @@ def charts():
     conn = create_connection()
     cursor = conn.cursor()
 
+    token = 'pepefork'
     # token_address = altlayer_token_address
-    token_address = pepefork_token_address
+    token_address = token_addresses[token]
 
     # 'balance', 'remaining_cost_basis', 'realized_gains'
-    balances_column = 'realized_gains'
+    balances_column = 'remaining_cost_basis'
     balances_rows = get_largest_balances(cursor, token_address, balances_column)
     balances_map = compute_balances_map(balances_rows, balances_column)
     prices = load_prices(cursor, token_address)
 
-    create_balances_and_price_graph(prices, balances_map, balances_column)
+    create_balances_and_price_graph(prices, balances_map, balances_column, token)
 
 
-def create_balances_and_price_graph(prices, balances_map, balances_column):
+def create_balances_and_price_graph(prices, balances_map, balances_column, token):
     fig = make_subplots(specs=[[{"secondary_y": True}]])
+    fig.update_layout(
+        title=dict(text=token, font=dict(size=30))
+    )
 
     for address in balances_map.keys():
         # address: [realized_gains, timestamps]
@@ -94,7 +98,7 @@ def load_prices(cursor, token_address):
     cursor.execute(query)
     prices = cursor.fetchall()
     print("Total prices rows are:  ", len(prices))
-    print(f'query time: {time.time() - start_time}')
+    print(f'load_prices time: {time.time() - start_time}')
     return prices
 
 
