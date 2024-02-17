@@ -2,8 +2,7 @@ import plotly.graph_objects as go
 import pandas as pd
 import plotly.express as px
 from plotly.subplots import make_subplots
-from database import *
-import time
+from charts.shared_charts import *
 
 filter_out_addresses = [
     '0x3aF2ACB662A241da4ef4310C7AB226f552B42115', # Altlayer Airdrop Safe Smart Account
@@ -32,17 +31,6 @@ def create_balances_and_price_graph(prices, balances_map, balances_column, token
     fig.show()
 
 
-def add_price_trace(prices, fig):
-    # 0 price, 1 timestamp
-    prices_y = [row[0] for row in prices]
-    prices_timestamp = [row[1] for row in prices]
-
-    fig.add_trace(
-        go.Scatter(x=prices_timestamp, y=prices_y, name="price"),
-        secondary_y=True,
-    )
-
-
 def compute_balances_map(balances_rows, balances_column):
     # 0 wallet_address, 1 timestamp, 2 balance, 3 total_cost_basis, 4 remaining_cost_basis, 5 realized_gains
     balances_map = {}
@@ -62,26 +50,6 @@ def compute_balances_map(balances_rows, balances_column):
         balances_map[row[0]][1].append(row[1])  # timestamp
 
     return balances_map
-
-
-def load_prices(cursor, token_address):
-    start_time = time.time()
-    query = f"""
-        SELECT 
-            price,
-            timestamp
-        FROM 
-            prices
-        WHERE
-            token_address='{token_address}'
-        ORDER BY
-            timestamp;
-        """
-    cursor.execute(query)
-    prices = cursor.fetchall()
-    print("Total prices rows are:  ", len(prices))
-    print(f'load_prices time: {time.time() - start_time}')
-    return prices
 
 
 def get_largest_balances(cursor, token_address, balances_column, after_timestamp=None):

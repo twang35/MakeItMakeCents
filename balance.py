@@ -84,7 +84,7 @@ def compute_balances(conn, token_address):
 
         # 0 block_number, 1 transaction_index, 2 log_index, 3 timestamp, 4 sender, 5 recipient, 6 token_id, 7 value
         block, _, _, _, sender, recipient, token_id, value = txn
-        price = time_to_price[block_times[block]] if block_times[block] >= first_price_timestamp else 0
+        price = get_price(time_to_price, first_price_timestamp, block_times[block])
 
         if value < smallest_balance or (wallets[sender][0] == 0 and value < 1):
             # don't count if value is too small
@@ -126,9 +126,9 @@ def update_sender(wallets, sender, value, price, txn):
 
     # wallet_address: [balance, total_cost_basis, remaining_cost_basis, realized_gains]
 
-    # update remaining cost basis
     try:
         cost_sent = value / wallets[sender][0] * wallets[sender][2]
+        # update remaining cost basis
         wallets[sender][2] -= cost_sent
         # update balance
         wallets[sender][0] -= value
@@ -179,15 +179,7 @@ def load_data(cursor, token_address, latest_block):
     print("Total block_times rows are: ", len(block_times_rows))
     block_times = to_block_times_map(block_times_rows)
 
-    query = f"""
-        SELECT * FROM prices
-        where token_address='{token_address}'
-        ORDER by timestamp;
-        """
-    cursor.execute(query)
-    prices_rows = cursor.fetchall()
-    print("Total prices rows are: ", len(prices_rows))
-    time_to_price, first_price_timestamp = to_prices_map(prices_rows)
+    time_to_price, first_price_timestamp = get_price_map(cursor, token_address)
 
     return txns, block_times, time_to_price, first_price_timestamp
 
@@ -201,6 +193,18 @@ def to_block_times_map(block_times_rows):
         output[row[0]] = row[1][:-2] + '00'
 
     return output
+
+
+def get_price_map(cursor, token_address):
+    query = f"""
+            SELECT * FROM prices
+            where token_address='{token_address}'
+            ORDER by timestamp;
+            """
+    cursor.execute(query)
+    prices_rows = cursor.fetchall()
+    print("Total prices rows are: ", len(prices_rows))
+    return to_prices_map(prices_rows)
 
 
 def to_prices_map(prices_rows):
@@ -224,6 +228,10 @@ def to_prices_map(prices_rows):
 
     # time_to_price map, first timestamp that has price data
     return time_to_price, prices_rows[0][1]
+
+
+def get_price(time_to_price, first_price_timestamp, timestamp):
+    return time_to_price[timestamp] if timestamp >= first_price_timestamp else 0
 
 
 if __name__ == "__main__":
