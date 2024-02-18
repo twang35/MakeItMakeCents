@@ -54,7 +54,7 @@ def create_unrealized_gains_by_holdings_graph(prices, gain_percentages, timestam
 def generate_unrealized_gains_by_holdings(balances_rows, time_to_price, first_price_timestamp):
     print('generate_unrealized_gains_by_holdings')
 
-    # create output and intermediate vars
+    start = time.time()
     # wallet_address: [balance, total_cost_basis, remaining_cost_basis, realized_gains, unrealized_gains]
     wallets = {}
     timestamps = []
@@ -71,19 +71,22 @@ def generate_unrealized_gains_by_holdings(balances_rows, time_to_price, first_pr
         10000: [],
     }
 
-    # row: wallet_address, token_address, timestamp, block, balance, total_cost_basis, remaining_cost_basis,
-    #   realized_gains
-
     # get first hour
     current_hour = datetime.datetime.fromisoformat(balances_rows[0][2][:-5] + '00:00')
 
-    # while not end of balances
     i = 0
+    print_interval = datetime.timedelta(days=7)
+    print_time = current_hour
+
+    # while not end of balances
     while i < len(balances_rows):
-        print(f'current_hour: {current_hour}')
+        if current_hour >= print_time:
+            print(f'current_hour: {current_hour}')
+            print_time += print_interval
 
         # get one hour of balances_rows
-        i, to_process_rows = get_balances_changes(i, balances_rows, current_hour)
+        i, to_process_rows = get_balances_changes(i=i, balances_rows=balances_rows,
+                                                  before_timestamp=current_hour+datetime.timedelta(minutes=60))
 
         # process changes to wallets map
         update_wallets(wallets, to_process_rows, current_hour, time_to_price, first_price_timestamp)
@@ -94,16 +97,16 @@ def generate_unrealized_gains_by_holdings(balances_rows, time_to_price, first_pr
 
         current_hour += datetime.timedelta(minutes=60)
 
-    print('completed generate_unrealized_gains_by_holdings')
+    print(f'completed generate_unrealized_gains_by_holdings: {time.time() - start}')
     return timestamps, gain_percentages
 
 
-def get_balances_changes(i, balances_rows, current_hour):
-    current_hour_str = str(current_hour)
-    next_hour_str = str(current_hour + datetime.timedelta(minutes=60))
+def get_balances_changes(i, balances_rows, before_timestamp):
+    before_str = str(before_timestamp)
     output = []
 
-    while i < len(balances_rows) and current_hour_str <= balances_rows[i][2] < next_hour_str:
+    # get timestamps before next_hour
+    while i < len(balances_rows) and balances_rows[i][2] < before_str:
         output.append(balances_rows[i])
         i += 1
 
@@ -151,7 +154,6 @@ def add_to_percentiles(gain_percentages, percentage, balance):
 
 
 def load_balances_table(cursor, token_address):
-    # todo: add block_number > {latest_block}
     query = f"""
         SELECT * FROM balances
         WHERE token_address = '{token_address}'
