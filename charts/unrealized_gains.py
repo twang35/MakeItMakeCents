@@ -22,8 +22,8 @@ def run_unrealized_gains():
     time_to_price, first_price_timestamp = get_price_map(cursor, token_address)
 
     # calculate URG
-    timestamps, gain_percentages = generate_unrealized_gains_by_holdings(balances_rows,
-                                                                         time_to_price, first_price_timestamp)
+    timestamps, gain_percentages = generate_unrealized_holdings_by_percent_gains(balances_rows,
+                                                                                 time_to_price, first_price_timestamp)
 
     # generate hourly graph
     prices = load_prices(cursor, token_address)
@@ -51,7 +51,7 @@ def create_unrealized_gains_by_holdings_graph(prices, gain_percentages, timestam
     fig.show()
 
 
-def generate_unrealized_gains_by_holdings(balances_rows, time_to_price, first_price_timestamp):
+def generate_unrealized_holdings_by_percent_gains(balances_rows, time_to_price, first_price_timestamp):
     print('generate_unrealized_gains_by_holdings')
 
     start = time.time()
