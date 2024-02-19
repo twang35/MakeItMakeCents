@@ -10,7 +10,7 @@ smallest_balance = 1e-12
 def run_balance():
     conn = create_connection()
 
-    # compute_balances(conn, altlayer_token_address)
+    compute_balances(conn, token_addresses['altlayer'])
 
     # balances = get_balances_before(conn, '2024-02-14 13:00:00', altlayer_token_address)
     balances = get_balances_before(conn, datetime.datetime.utcnow(), token_addresses['altlayer'])
@@ -162,6 +162,7 @@ def update_recipient(wallets, recipient, value, price):
 def load_data(cursor, token_address, latest_block):
     print(f"Loading for token_address {token_address} after block {latest_block}")
 
+    start = time.time()
     query = f"""
         SELECT * FROM transactions
         WHERE block_number > {latest_block} and token_address = '{token_address}'
@@ -181,6 +182,7 @@ def load_data(cursor, token_address, latest_block):
 
     time_to_price, first_price_timestamp = get_price_map(cursor, token_address)
 
+    print(f'load_data time: {time.time() - start}s')
     return txns, block_times, time_to_price, first_price_timestamp
 
 
