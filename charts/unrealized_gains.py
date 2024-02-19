@@ -45,8 +45,8 @@ def create_unrealized_gains_graph(prices, percentages, timestamps, token, legend
     fig.update_layout(legend_title_text=legend_title)
     # Set y-axes titles
     fig.update_yaxes(title_text=y_axis_title, secondary_y=False)
-    fig.update_yaxes(title_text="price", secondary_y=True)
-    fig.update_layout(hovermode="x")
+    fig.update_yaxes(title_text="price", showspikes=True, secondary_y=True)
+    fig.update_layout(hovermode="x unified")
     fig.show()
 
 
