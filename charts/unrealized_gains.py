@@ -1,10 +1,5 @@
-import plotly.graph_objects as go
-import pandas as pd
-import plotly.express as px
 from plotly.subplots import make_subplots
-from database import *
 from balance import *
-import time
 from charts.shared_charts import *
 
 
@@ -22,14 +17,14 @@ def run_unrealized_gains():
     time_to_price, first_price_timestamp = get_price_map(cursor, token_address)
 
     # calculate URG
-    timestamps, percentages = generate_unrealized_gains_by_percent_holdings(balances_rows,
-                                                                            time_to_price, first_price_timestamp)
+    timestamps, percentages = generate_unrealized_gains_by_holdings_percentiles(balances_rows,
+                                                                                time_to_price, first_price_timestamp)
 
     # generate hourly graph
     prices = load_prices(cursor, token_address)
     create_unrealized_gains_graph(prices, percentages, timestamps, token,
                                   legend_title='balance percentiles',
-                                  y_axis_title='unrealized_gain')
+                                  y_axis_title='avg percent unrealized gain')
 
 
 def create_unrealized_gains_graph(prices, percentages, timestamps, token, legend_title, y_axis_title):
@@ -51,6 +46,7 @@ def create_unrealized_gains_graph(prices, percentages, timestamps, token, legend
     # Set y-axes titles
     fig.update_yaxes(title_text=y_axis_title, secondary_y=False)
     fig.update_yaxes(title_text="price", secondary_y=True)
+    fig.update_layout(hovermode="x")
     fig.show()
 
 
@@ -106,23 +102,21 @@ def generate_holdings_by_percent_gains(balances_rows, time_to_price, first_price
     return timestamps, gain_percentages
 
 
-def generate_unrealized_gains_by_percent_holdings(balances_rows, time_to_price, first_price_timestamp):
+def generate_unrealized_gains_by_holdings_percentiles(balances_rows, time_to_price, first_price_timestamp,
+                                                      max_urg_percent=10000):
     print('generate_unrealized_gains_by_holdings')
 
     start = time.time()
     # wallet_address: [balance, total_cost_basis, remaining_cost_basis, realized_gains, unrealized_gains]
     wallets = {}
     timestamps = []
-    holdings_percentages = {  # balances are bucketed down
+    holdings_percentiles = {  # balances are bucketed down
         0.1: [],
-        0.2: [],
         0.5: [],
         1: [],
-        2: [],
         5: [],
         10: [],
-        20: [],
-        30: [],
+        25: [],
         50: [],
         100: [],
     }
@@ -150,13 +144,13 @@ def generate_unrealized_gains_by_percent_holdings(balances_rows, time_to_price, 
         update_wallets(wallets, to_process_rows, price, remove_empty_wallets=True)
 
         # for all wallets, recalculate all holdings percentile info
-        update_unrealized_gains_by_holdings_percentiles(holdings_percentages, wallets)
+        update_unrealized_gain_percent_by_holdings_percentiles(holdings_percentiles, wallets, max_urg_percent)
         timestamps.append(str(current_hour))
 
         current_hour += datetime.timedelta(minutes=60)
 
-    print(f'completed generate_unrealized_gains_by_holdings: {time.time() - start}')
-    return timestamps, holdings_percentages
+    print(f'completed generate_unrealized_gains_by_holdings: {time.time() - start}s')
+    return timestamps, holdings_percentiles
 
 
 def get_balances_changes(i, balances_rows, before_timestamp):
@@ -211,15 +205,16 @@ def add_to_percentiles(gain_percentages, percentage, balance):
             return
 
 
-def update_unrealized_gains_by_holdings_percentiles(holdings_percentages, wallets):
-    # add new row for percentiles
+def update_unrealized_gain_percent_by_holdings_percentiles(holdings_percentages, wallets, max_urg_percent):
+    current_percentage_gains = {}  # percentile_key: [remaining cost basis, unrealized gains]
     for key in holdings_percentages.keys():
-        holdings_percentages[key].append(0)
+        current_percentage_gains[key] = [0, 0]
 
     # add all balance, unrealized_gains to list
-    balances_and_urgs = []  # (balance, unrealized_gain)
+    # todo: refactor this into method that uses a dict to map column name to index
+    balances_and_urgs = []  # (balance, remaining_cost_basis, unrealized_gain)
     for balance, total_cost_basis, remaining_cost_basis, realized_gains, unrealized_gains in wallets.values():
-        balances_and_urgs.append((balance, unrealized_gains))
+        balances_and_urgs.append((balance, remaining_cost_basis, unrealized_gains))
 
     # reverse sort so largest at front
     balances_and_urgs.sort(reverse=True)
@@ -237,10 +232,21 @@ def update_unrealized_gains_by_holdings_percentiles(holdings_percentages, wallet
         while i > percentage_index_num:
             percentage_key, percentage_index_num = percentile_breakpoints.pop(0)
 
-        # add unrealized_gains to holdings_percentages
-        holdings_percentages[percentage_key][-1] += balances_and_urgs[i][1]
+        # add remaining_cost_basis
+        current_percentage_gains[percentage_key][0] += balances_and_urgs[i][1]
+        # add unrealized_gains
+        current_percentage_gains[percentage_key][1] += balances_and_urgs[i][2]
 
         i += 1
+
+    # add new row for each percentile
+    for key in holdings_percentages.keys():
+        remaining_cost_basis, unrealized_gains = current_percentage_gains[key]
+        if remaining_cost_basis < smallest_balance:
+            percent_gain = 0
+        else:
+            percent_gain = min(unrealized_gains / remaining_cost_basis * 100 - 100, max_urg_percent)
+        holdings_percentages[key].append(percent_gain)
 
 
 def load_balances_table(cursor, token_address):

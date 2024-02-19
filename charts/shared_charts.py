@@ -8,7 +8,7 @@ def add_price_trace(prices, fig):
     prices_timestamp = [row[1] for row in prices]
 
     fig.add_trace(
-        go.Scatter(x=prices_timestamp, y=prices_y, name="price"),
+        go.Scatter(x=prices_timestamp, y=prices_y, name="price", line=dict(color='black')),
         secondary_y=True,
     )
 
