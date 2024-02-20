@@ -2,6 +2,9 @@ from plotly.subplots import make_subplots
 from balance import *
 from charts.shared_charts import *
 
+holdings_by_urg = 'holdings_by_unrealized_gains'
+urg_percent_by_holdings = 'unrealized_gains_percent_return_by_holdings'
+
 
 def run_unrealized_gains():
     token = 'pepefork'
@@ -17,8 +20,10 @@ def run_unrealized_gains():
     time_to_price, first_price_timestamp = get_price_map(cursor, token_address)
 
     # calculate URG
-    timestamps, percentages = generate_unrealized_gains_by_holdings_percentiles(balances_rows,
-                                                                                time_to_price, first_price_timestamp)
+    percentile_type = urg_percent_by_holdings
+    # percentile_type = holdings_by_urg
+    timestamps, percentages = generate_percentiles(percentile_type, balances_rows,
+                                                   time_to_price, first_price_timestamp)
 
     # generate hourly graph
     prices = load_prices(cursor, token_address)
@@ -50,76 +55,39 @@ def create_unrealized_gains_graph(prices, percentages, timestamps, token, legend
     fig.show()
 
 
-def generate_holdings_by_percent_gains(balances_rows, time_to_price, first_price_timestamp):
-    print('generate_holdings_by_unrealized_gains')
+def generate_percentiles(percentile_type, balances_rows, time_to_price, first_price_timestamp, max_urg_percent=10000):
+    print(f'running generate_percentiles on {percentile_type}')
 
     start = time.time()
     # wallet_address: [balance, total_cost_basis, remaining_cost_basis, realized_gains, unrealized_gains]
     wallets = {}
     timestamps = []
-    gain_percentages = {  # balances are bucketed down
-        -100: [],
-        0: [],
-        25: [],
-        50: [],
-        75: [],
-        100: [],
-        200: [],
-        500: [],
-        1000: [],
-        10000: [],
-    }
-
-    # get first hour
-    current_hour = datetime.datetime.fromisoformat(balances_rows[0][2][:-5] + '00:00')
-
-    i = 0
-    print_interval = datetime.timedelta(days=7)
-    print_time = current_hour
-
-    # while not end of balances
-    while i < len(balances_rows):
-        if current_hour >= print_time:
-            print(f'current_hour: {current_hour}')
-            print_time += print_interval
-
-        # get one hour of balances_rows
-        i, to_process_rows = get_balances_changes(i=i, balances_rows=balances_rows,
-                                                  before_timestamp=current_hour+datetime.timedelta(minutes=60))
-
-        # use price at the end of the hour to calculate all price movements from the current hour
-        price = get_price(time_to_price, first_price_timestamp, str(current_hour + datetime.timedelta(minutes=60)))
-        # process changes to wallets map
-        update_wallets(wallets, to_process_rows, price)
-
-        # for all wallets, recalculate all holdings and percentile info
-        update_percentiles(gain_percentages, wallets)
-        timestamps.append(str(current_hour))
-
-        current_hour += datetime.timedelta(minutes=60)
-
-    print(f'completed generate_unrealized_gains_by_holdings: {time.time() - start}')
-    return timestamps, gain_percentages
-
-
-def generate_unrealized_gains_by_holdings_percentiles(balances_rows, time_to_price, first_price_timestamp,
-                                                      max_urg_percent=10000):
-    print('generate_unrealized_gains_by_holdings')
-
-    start = time.time()
-    # wallet_address: [balance, total_cost_basis, remaining_cost_basis, realized_gains, unrealized_gains]
-    wallets = {}
-    timestamps = []
-    holdings_percentiles = {  # balances are bucketed down
-        0.1: [],
-        0.5: [],
-        1: [],
-        5: [],
-        10: [],
-        25: [],
-        50: [],
-        100: [],
-    }
+    if percentile_type == urg_percent_by_holdings:
+        percentiles = {  # balances are bucketed down
+            0.1: [],
+            0.5: [],
+            1: [],
+            5: [],
+            10: [],
+            25: [],
+            50: [],
+            100: [],
+        }
+    elif percentile_type == holdings_by_urg:
+        percentiles = {  # balances are bucketed down
+            -100: [],
+            0: [],
+            25: [],
+            50: [],
+            75: [],
+            100: [],
+            200: [],
+            500: [],
+            1000: [],
+            10000: [],
+        }
+    else:
+        raise Exception("unrecognized percentile type")
 
     # get first hour
     current_hour = datetime.datetime.fromisoformat(balances_rows[0][2][:-5] + '00:00')
@@ -143,14 +111,17 @@ def generate_unrealized_gains_by_holdings_percentiles(balances_rows, time_to_pri
         # process changes to wallets map
         update_wallets(wallets, to_process_rows, price, remove_empty_wallets=True)
 
-        # for all wallets, recalculate all holdings percentile info
-        update_unrealized_gain_percent_by_holdings_percentiles(holdings_percentiles, wallets, max_urg_percent)
+        # for all wallets, recalculate all percentile info
+        if percentile_type == urg_percent_by_holdings:
+            update_unrealized_gain_percent_by_holdings_percentiles(percentiles, wallets, max_urg_percent)
+        elif percentile_type == holdings_by_urg:
+            update_balance_percentiles(percentiles, wallets)
         timestamps.append(str(current_hour))
 
         current_hour += datetime.timedelta(minutes=60)
 
-    print(f'completed generate_unrealized_gains_by_holdings: {time.time() - start}s')
-    return timestamps, holdings_percentiles
+    print(f'completed generate_percentiles: {time.time() - start}')
+    return timestamps, percentiles
 
 
 def get_balances_changes(i, balances_rows, before_timestamp):
@@ -179,7 +150,7 @@ def update_wallets(wallets, to_process_rows, price, remove_empty_wallets=False):
         wallets[address][4] = wallets[address][0] * price
 
 
-def update_percentiles(gain_percentages, wallets):
+def update_balance_percentiles(gain_percentages, wallets):
     # add new row for percentiles
     for key in gain_percentages.keys():
         gain_percentages[key].append(0)

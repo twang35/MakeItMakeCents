@@ -5,7 +5,6 @@ from plotly.subplots import make_subplots
 
 from charts.balance_rows import *
 from database import *
-import time
 
 
 def charts():
