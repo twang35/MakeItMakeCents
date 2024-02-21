@@ -4,6 +4,7 @@ import datetime
 from database import *
 
 null_address = '0x0000000000000000000000000000000000000000'
+dead_address = '0x000000000000000000000000000000000000dead'
 smallest_balance = 1e-12
 
 
@@ -142,8 +143,8 @@ def update_sender(wallets, sender, value, price, txn):
 
 
 def update_recipient(wallets, recipient, value, price):
-    if recipient == null_address:
-        # do not subtract
+    if recipient == null_address or recipient == dead_address:
+        # do not add to null address
         print(f'null address burned: {value}')
         return
 
