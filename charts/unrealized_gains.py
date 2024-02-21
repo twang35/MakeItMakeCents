@@ -1,9 +1,20 @@
 from plotly.subplots import make_subplots
 from balance import *
 from charts.shared_charts import *
+from dataclasses import dataclass
 
-holdings_by_urg = 'holdings_by_unrealized_gains'
-urg_percent_by_holdings = 'unrealized_gains_percent_return_by_holdings'
+
+@dataclass
+class ChartType:
+    name: str
+    legend_title: str
+    y_axis_title: str
+
+
+holdings_by_urg_percent = ChartType('holdings by unrealized gains percent', 'unrealized gain percent',
+                                    'token balance')
+urg_percent_by_holdings = ChartType('unrealized gains percent return by holdings', 'balance percentiles',
+                                    'avg percent unrealized gain')
 
 
 def run_unrealized_gains():
@@ -20,22 +31,19 @@ def run_unrealized_gains():
     time_to_price, first_price_timestamp = get_price_map(cursor, token_address)
 
     # calculate URG
-    percentile_type = urg_percent_by_holdings
-    # percentile_type = holdings_by_urg
-    timestamps, percentages = generate_percentiles(percentile_type, balances_rows,
-                                                   time_to_price, first_price_timestamp)
+    chart_type = urg_percent_by_holdings
+    # chart_type = holdings_by_urg
+    timestamps, percentages = generate_percentiles(chart_type, balances_rows, time_to_price, first_price_timestamp)
 
     # generate hourly graph
     prices = load_prices(cursor, token_address)
-    create_unrealized_gains_graph(prices, percentages, timestamps, token,
-                                  legend_title='balance percentiles',
-                                  y_axis_title='avg percent unrealized gain')
+    create_unrealized_gains_graph(prices, percentages, timestamps, token, chart_type)
 
 
-def create_unrealized_gains_graph(prices, percentages, timestamps, token, legend_title, y_axis_title):
+def create_unrealized_gains_graph(prices, percentages, timestamps, token, chart_type):
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     fig.update_layout(
-        title=dict(text=token, font=dict(size=30))
+        title=dict(text=f'{token} {chart_type.name}', font=dict(size=25))
     )
 
     for percentage in percentages.keys():
@@ -47,22 +55,22 @@ def create_unrealized_gains_graph(prices, percentages, timestamps, token, legend
 
     add_price_trace(prices, fig)
 
-    fig.update_layout(legend_title_text=legend_title)
+    fig.update_layout(legend_title_text=chart_type.legend_title)
     # Set y-axes titles
-    fig.update_yaxes(title_text=y_axis_title, secondary_y=False)
+    fig.update_yaxes(title_text=chart_type.y_axis_title, secondary_y=False)
     fig.update_yaxes(title_text="price", showspikes=True, secondary_y=True)
     fig.update_layout(hovermode="x unified")
     fig.show()
 
 
-def generate_percentiles(percentile_type, balances_rows, time_to_price, first_price_timestamp, max_urg_percent=10000):
-    print(f'running generate_percentiles on {percentile_type}')
+def generate_percentiles(chart_type, balances_rows, time_to_price, first_price_timestamp, max_urg_percent=10000):
+    print(f'running generate_percentiles on {chart_type.name}')
 
     start = time.time()
     # wallet_address: [balance, total_cost_basis, remaining_cost_basis, realized_gains, unrealized_gains]
     wallets = {}
     timestamps = []
-    if percentile_type == urg_percent_by_holdings:
+    if chart_type == urg_percent_by_holdings:
         percentiles = {  # balances are bucketed down
             0.1: [],
             0.5: [],
@@ -73,7 +81,7 @@ def generate_percentiles(percentile_type, balances_rows, time_to_price, first_pr
             50: [],
             100: [],
         }
-    elif percentile_type == holdings_by_urg:
+    elif chart_type == holdings_by_urg_percent:
         percentiles = {  # balances are bucketed down
             -100: [],
             0: [],
@@ -104,7 +112,7 @@ def generate_percentiles(percentile_type, balances_rows, time_to_price, first_pr
 
         # get one hour of balances_rows
         i, to_process_rows = get_balances_changes(i=i, balances_rows=balances_rows,
-                                                  before_timestamp=current_hour+datetime.timedelta(minutes=60))
+                                                  before_timestamp=current_hour + datetime.timedelta(minutes=60))
 
         # use price at the end of the hour to calculate all price movements from the current hour
         price = get_price(time_to_price, first_price_timestamp, str(current_hour + datetime.timedelta(minutes=60)))
@@ -112,9 +120,9 @@ def generate_percentiles(percentile_type, balances_rows, time_to_price, first_pr
         update_wallets(wallets, to_process_rows, price, remove_empty_wallets=True)
 
         # for all wallets, recalculate all percentile info
-        if percentile_type == urg_percent_by_holdings:
+        if chart_type == urg_percent_by_holdings:
             update_unrealized_gain_percent_by_holdings_percentiles(percentiles, wallets, max_urg_percent)
-        elif percentile_type == holdings_by_urg:
+        elif chart_type == holdings_by_urg_percent:
             update_balance_percentiles(percentiles, wallets)
         timestamps.append(str(current_hour))
 
@@ -171,7 +179,7 @@ def update_balance_percentiles(gain_percentages, wallets):
 def add_to_percentiles(gain_percentages, percentage, balance):
     keys = list(gain_percentages.keys())
     for i in range(len(keys)):
-        if i == len(keys)-1 or keys[i] <= percentage < keys[i+1]:
+        if i == len(keys) - 1 or keys[i] <= percentage < keys[i + 1]:
             gain_percentages[keys[i]][-1] += balance
             return
 

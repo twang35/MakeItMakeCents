@@ -13,7 +13,7 @@ filter_out_addresses = [
 def create_balances_and_price_graph(prices, balances_map, balances_column, token):
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     fig.update_layout(
-        title=dict(text=token, font=dict(size=30))
+        title=dict(text=f'{token} {balances_column} top addresses', font=dict(size=25))
     )
 
     for address in balances_map.keys():
