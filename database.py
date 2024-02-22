@@ -31,8 +31,19 @@ def create_connection(db_file=database_path):
     return conn
 
 
+class TransactionsColumns:
+    name = 'transactions'
+    block_number = 0
+    transaction_index = 1
+    log_index = 2
+    timestamp = 3
+    sender = 4
+    recipient = 5
+    token_address = 6
+    value = 7
+
+
 def create_transactions_table():
-    # block_number, transaction_index, log_index, sender, recipient, token_address, value
     sql_create_transactions_table = """ CREATE TABLE IF NOT EXISTS transactions (
                                         block_number INTEGER NOT NULL,
                                         transaction_index INTEGER NOT NULL,
@@ -48,8 +59,14 @@ def create_transactions_table():
     create_table(sql_create_transactions_table)
 
 
+class BlockTimesColumns:
+    name = 'block_times'
+    block_number = 0
+    timestamp = 1
+    epoch_seconds = 2
+
+
 def create_block_times_table():
-    # PRIMARY(block_number, timestamp, epoch_seconds)
     sql_create_block_table = """ CREATE TABLE IF NOT EXISTS block_times (
                                         block_number INTEGER NOT NULL,
                                         timestamp TEXT NOT NULL,
@@ -60,8 +77,16 @@ def create_block_times_table():
     create_table(sql_create_block_table)
 
 
+class PricesColumns:
+    name = 'prices'
+    token_address = 0
+    timestamp = 1
+    token_symbol = 2
+    price = 3
+    volume = 4
+
+
 def create_prices_table():
-    # PRIMARY(token_address, timestamp), token_symbol, price, volume
     sql_create_price_table = """ CREATE TABLE IF NOT EXISTS prices (
                                         token_address TEXT NOT NULL,
                                         timestamp TEXT NOT NULL,
@@ -74,9 +99,19 @@ def create_prices_table():
     create_table(sql_create_price_table)
 
 
+class BalancesColumns:
+    name = 'balances'
+    wallet_address = 0
+    token_address = 1
+    timestamp = 2
+    block_number = 3
+    balance = 4
+    total_cost_basis = 5
+    remaining_cost_basis = 6
+    realized_gains = 7
+
+
 def create_balances_table():
-    # PRIMARY(wallet_address, token_address, timestamp),
-    #   balance, total_cost_basis, remaining_cost_basis, realized_gains, unrealized_gains
     sql_create_balances_table = """ CREATE TABLE IF NOT EXISTS balances (
                                         wallet_address TEXT NOT NULL,
                                         token_address TEXT NOT NULL,
