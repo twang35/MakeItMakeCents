@@ -24,9 +24,10 @@ def price():
     prices = get_prices(
         token_address='0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB',
         # start='2024-01-24 21:46:00', end='2024-02-15 09:15:36')
-        start=datetime.datetime.fromisoformat('2024-02-03 20:26:00'),
+        start=datetime.datetime.fromisoformat('2024-02-22 10:26:00'),
         end=datetime.datetime.fromisoformat('2024-02-03 21:15:36'))
     # process_prices(prices, conn)
+    print('done price')
 
 
 def process_price_dates(token_address, queue_name):

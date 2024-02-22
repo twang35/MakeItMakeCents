@@ -18,8 +18,8 @@ def charts():
     balances_column = 'realized_gains'
 
     # unrealized gains graph settings
-    # chart_type = urg_percent_by_holdings
-    chart_type = holdings_by_urg_percent
+    chart_type = urg_percent_by_holdings
+    # chart_type = holdings_by_urg_percent
 
     # generate graphs #################
     conn = create_connection()
@@ -27,7 +27,7 @@ def charts():
 
     prices = load_prices(cursor, token_addresses[token])
 
-    create_balances_graph(token, balances_column, prices, cursor)
+    # create_balances_graph(token, balances_column, prices, cursor)
     create_urg_chart(token, chart_type, prices, cursor)
 
 

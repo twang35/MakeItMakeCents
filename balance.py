@@ -2,6 +2,7 @@ import time
 from pprint import pprint
 import datetime
 from database import *
+from charts.shared_charts import *
 
 null_address = '0x0000000000000000000000000000000000000000'
 dead_address = '0x000000000000000000000000000000000000dead'
@@ -83,8 +84,11 @@ def compute_balances(conn, token_address):
             start = time.time()
         i += 1
 
-        # 0 block_number, 1 transaction_index, 2 log_index, 3 timestamp, 4 sender, 5 recipient, 6 token_id, 7 value
-        block, _, _, _, sender, recipient, token_id, value = txn
+        block = txn[TransactionsColumns.block_number]
+        sender = txn[TransactionsColumns.sender]
+        recipient = txn[TransactionsColumns.recipient]
+        token_address = txn[TransactionsColumns.token_address]
+        value = txn[TransactionsColumns.value]
         price = get_price(time_to_price, first_price_timestamp, block_times[block])
 
         if value < smallest_balance or (wallets[sender][0] == 0 and value < 1):
@@ -99,12 +103,12 @@ def compute_balances(conn, token_address):
         #   realized_gains
         if sender != null_address:
             balance, total_cost_basis, remaining_cost_basis, realized_gains = wallets[sender]
-            row = (sender, token_id, block_times[block], block,
+            row = (sender, token_address, block_times[block], block,
                    balance, total_cost_basis, remaining_cost_basis, realized_gains)
             insert_balance(conn, row)
         if recipient != null_address:
             balance, total_cost_basis, remaining_cost_basis, realized_gains = wallets[recipient]
-            row = (recipient, token_id, block_times[block], block,
+            row = (recipient, token_address, block_times[block], block,
                    balance, total_cost_basis, remaining_cost_basis, realized_gains)
             insert_balance(conn, row)
 
@@ -193,48 +197,9 @@ def to_block_times_map(block_times_rows):
     for row in block_times_rows:
         # block_num -> timestamp -> round down to nearest minute
         # rounds seconds down: '2024-02-01 13:34:12' -> '2024-02-01 13:34:00'
-        output[row[0]] = row[1][:-2] + '00'
+        output[row[BlockTimesColumns.block_number]] = row[BlockTimesColumns.timestamp][:-2] + '00'
 
     return output
-
-
-def get_price_map(cursor, token_address):
-    query = f"""
-            SELECT * FROM prices
-            where token_address='{token_address}'
-            ORDER by timestamp;
-            """
-    cursor.execute(query)
-    prices_rows = cursor.fetchall()
-    print("Total prices rows are: ", len(prices_rows))
-    return to_prices_map(prices_rows)
-
-
-def to_prices_map(prices_rows):
-    time_to_price = {}
-    # 0 token_address, 1 timestamp, 2 token_symbol, 3 price, 4 volume
-    for row in prices_rows:
-        time_to_price[row[1]] = row[3]
-
-    cur_time = datetime.datetime.fromisoformat(prices_rows[0][1])
-    last_time = datetime.datetime.utcnow()
-
-    last_price = time_to_price[str(cur_time)]
-
-    while cur_time < last_time:
-        # replace missing times with last price
-        if str(cur_time) not in time_to_price:
-            time_to_price[str(cur_time)] = last_price
-        else:
-            last_price = time_to_price[str(cur_time)]
-        cur_time += datetime.timedelta(seconds=60)
-
-    # time_to_price map, first timestamp that has price data
-    return time_to_price, prices_rows[0][1]
-
-
-def get_price(time_to_price, first_price_timestamp, timestamp):
-    return time_to_price[timestamp] if timestamp >= first_price_timestamp else 0
 
 
 if __name__ == "__main__":
