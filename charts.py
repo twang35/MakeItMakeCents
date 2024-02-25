@@ -10,8 +10,9 @@ from database import *
 
 def charts():
     # manual settings #################
-    token = pepefork
+    # token = pepefork
     # token = altlayer
+    token = xcad
 
     # balance graph settings
     # 'balance', 'remaining_cost_basis', 'realized_gains'
