@@ -35,7 +35,7 @@ def process_price_dates(token_address, queue_name):
     conn = create_connection()
     i = 0
     start = time.time()
-    print_interval = 1
+    print_interval = 10
 
     # get date and query
     while q.qsize() > 0:
@@ -70,6 +70,8 @@ def process_prices(prices, conn):
 
 
 def get_prices(token_address, start, end):
+    # running into rate limit exceeded errors
+    time.sleep(1)
     url = "https://api.transpose.io/sql"
     sql_query = f"""
     SELECT token_address, timestamp, token_symbol, average_price, volume

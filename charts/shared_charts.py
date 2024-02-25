@@ -85,3 +85,15 @@ def load_balances_table(cursor, token_address):
     rows = cursor.fetchall()
     print("Total balances rows are: ", len(rows))
     return rows
+
+
+# essentially a paginated way to get the next hour of balances_rows changes
+def get_balances_changes(i, balances_rows, before_timestamp):
+    before_str = str(before_timestamp)
+    output = []
+
+    while i < len(balances_rows) and balances_rows[i][BalancesColumns.timestamp] < before_str:
+        output.append(balances_rows[i])
+        i += 1
+
+    return i, output

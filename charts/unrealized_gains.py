@@ -97,7 +97,7 @@ def generate_percentiles(chart_type, balances_rows, time_to_price, first_price_t
         raise Exception("unrecognized percentile type")
 
     # get first hour
-    current_hour = datetime.datetime.fromisoformat(balances_rows[0][2][:-5] + '00:00')
+    current_hour = datetime.datetime.fromisoformat(balances_rows[0][BalancesColumns.timestamp][:-5] + '00:00')
 
     i = 0
     print_interval = datetime.timedelta(days=7)
@@ -131,24 +131,13 @@ def generate_percentiles(chart_type, balances_rows, time_to_price, first_price_t
     return timestamps, percentiles
 
 
-def get_balances_changes(i, balances_rows, before_timestamp):
-    before_str = str(before_timestamp)
-    output = []
-
-    # get timestamps before next_hour
-    while i < len(balances_rows) and balances_rows[i][2] < before_str:
-        output.append(balances_rows[i])
-        i += 1
-
-    return i, output
-
-
 def update_wallets(wallets, to_process_rows, price, remove_empty_wallets=False):
-    # row: 0 wallet_address, 1 token_address, 2 timestamp, 3 block, 4 balance, 5 total_cost_basis,
-    #   6 remaining_cost_basis, 7 realized_gains
     for row in to_process_rows:
         # wallet_address: [balance, total_cost_basis, remaining_cost_basis, realized_gains, unrealized_gains]
-        wallets[row[0]] = [row[4], row[5], row[6], row[7], 0]
+        wallets[row[BalancesColumns.wallet_address]] = [row[BalancesColumns.balance],
+                                                        row[BalancesColumns.total_cost_basis],
+                                                        row[BalancesColumns.remaining_cost_basis],
+                                                        row[BalancesColumns.realized_gains], 0]
         if remove_empty_wallets and row[4] < smallest_balance:
             wallets.pop(row[0])
 

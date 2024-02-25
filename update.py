@@ -15,15 +15,15 @@ def update():
     # only_print_queue(queue='update')
 
     # Update existing token #########################
-    # update_all_data(pepefork.address)
+    update_all_data(xcad.address)
 
     # Download new token #########################
-    token_address = xcad.address
-
-    start_txn_block = 12419395  # xcad started around 12429395
-    start_price_time = datetime.datetime.fromisoformat('2021-05-12 00:45:59')
-
-    update_all_data(token_address, new_token=True, start_txn_block=start_txn_block, start_price_time=start_price_time)
+    # token_address = xcad.address
+    #
+    # start_txn_block = 12419395  # xcad started around 12429395
+    # start_price_time = datetime.datetime.fromisoformat('2021-05-12 00:45:59')
+    #
+    # update_all_data(token_address, new_token=True, start_txn_block=start_txn_block, start_price_time=start_price_time)
 
 
 def update_all_data(token_address, new_token=False, start_txn_block=None, start_price_time=None):

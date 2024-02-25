@@ -93,7 +93,7 @@ def compute_balances(conn, token_address):
         value = txn[TransactionsColumns.value]
         price = get_price(time_to_price, first_price_timestamp, block_times[block])
 
-        if value < smallest_balance or (wallets[sender][0] == 0 and value < 1):
+        if sender != null_address and (value < smallest_balance or (wallets[sender][0] == 0 and value < 1)):
             # don't count if value is too small
             # or if wallet has 0 balance due to SQLite REAL number precision being too low
             continue
