@@ -17,7 +17,7 @@ def create_balances_and_price_graph(prices, balances_map, balances_column, token
     )
 
     for address in balances_map.keys():
-        # address: [realized_gains, timestamps]
+        # address: [balances_column, timestamps]
         fig.add_trace(
             go.Scatter(x=balances_map[address][1], y=balances_map[address][0], name=address),
             secondary_y=False,

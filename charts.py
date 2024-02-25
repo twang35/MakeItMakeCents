@@ -31,6 +31,7 @@ def charts():
     create_urg_chart(token, chart_type, prices, cursor)
 
 
+# displays largest 15 wallets for the selected balances_column from the balances table
 def create_balances_graph(token, balances_column, prices, cursor):
     token_address = token_addresses[token]
     largest_balances_rows = get_largest_balances(cursor, token_address, balances_column)
@@ -39,6 +40,8 @@ def create_balances_graph(token, balances_column, prices, cursor):
     create_balances_and_price_graph(prices, balances_map, balances_column, token)
 
 
+# display unrealized gains data depending on the chart_type, ie urg_percent_by_holdings shows how much urg percent for
+# each percentile of token balances (top 0.1%, top 1%, top 10%, etc.)
 def create_urg_chart(token, chart_type, prices, cursor):
     # load balances
     token_address = token_addresses[token]
