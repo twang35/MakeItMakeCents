@@ -97,7 +97,7 @@ def get_transpose_block_times(start, end, max_block):
     sql_query = f"""
     SELECT block_number, timestamp
     FROM ethereum.blocks
-    WHERE block_number BETWEEN {start} AND {min(end, max_block)};
+    WHERE block_number BETWEEN {start} AND {min(end+1, max_block+1)};
     """
 
     headers = {

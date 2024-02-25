@@ -23,6 +23,7 @@ class Token:
 
 altlayer = Token('altlayer', '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB')
 pepefork = Token('pepefork', '0xb9f599ce614Feb2e1BBe58F180F370D05b39344E')
+xcad = Token('xcad', '0x7659CE147D0e714454073a5dd7003544234b6Aa0')
 
 
 def create_connection(db_file=database_path):
@@ -186,6 +187,17 @@ def insert_balance(conn, row):
     cur = conn.cursor()
     cur.execute(sql, row)
     conn.commit()
+
+
+def get_earliest_block_times_block(conn):
+    cursor = conn.cursor()
+    query = f"""
+        SELECT MIN(block_number) AS earliest_block_number
+        FROM block_times;
+        """
+    cursor.execute(query)
+    result = cursor.fetchall()
+    return result[0][0]
 
 
 def get_latest_block_times_block(conn):
