@@ -18,17 +18,16 @@ urg_percent_by_holdings = ChartType('unrealized gains percent return by holdings
 
 
 def run_unrealized_gains():
-    token = 'pepefork'
+    token = pepefork
 
     conn = create_connection()
     cursor = conn.cursor()
 
     # load balances
-    token_address = token_addresses[token]
-    balances_rows = load_balances_table(cursor, token_address)
+    balances_rows = load_balances_table(cursor, token.address)
 
     # load prices
-    time_to_price, first_price_timestamp = get_price_map(cursor, token_address)
+    time_to_price, first_price_timestamp = get_price_map(cursor, token.address)
 
     # calculate URG
     chart_type = urg_percent_by_holdings
@@ -36,14 +35,14 @@ def run_unrealized_gains():
     timestamps, percentages = generate_percentiles(chart_type, balances_rows, time_to_price, first_price_timestamp)
 
     # generate hourly graph
-    prices = load_prices(cursor, token_address)
+    prices = load_prices(cursor, token.address)
     create_unrealized_gains_graph(prices, percentages, timestamps, token, chart_type)
 
 
 def create_unrealized_gains_graph(prices, percentages, timestamps, token, chart_type):
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     fig.update_layout(
-        title=dict(text=f'{token} {chart_type.name}', font=dict(size=25))
+        title=dict(text=f'{token.name} {chart_type.name}', font=dict(size=25))
     )
 
     for percentage in percentages.keys():
@@ -226,18 +225,6 @@ def update_unrealized_gain_percent_by_holdings_percentiles(holdings_percentages,
         else:
             percent_gain = min(unrealized_gains / remaining_cost_basis * 100 - 100, max_urg_percent)
         holdings_percentages[key].append(percent_gain)
-
-
-def load_balances_table(cursor, token_address):
-    query = f"""
-        SELECT * FROM balances
-        WHERE token_address = '{token_address}'
-        ORDER BY block_number;
-        """
-    cursor.execute(query)
-    rows = cursor.fetchall()
-    print("Total balances rows are: ", len(rows))
-    return rows
 
 
 if __name__ == "__main__":

@@ -73,3 +73,15 @@ def to_prices_map(prices_rows):
 
 def get_price(time_to_price, first_price_timestamp, timestamp):
     return time_to_price[timestamp] if timestamp >= first_price_timestamp else 0
+
+
+def load_balances_table(cursor, token_address):
+    query = f"""
+        SELECT * FROM balances
+        WHERE token_address = '{token_address}'
+        ORDER BY block_number;
+        """
+    cursor.execute(query)
+    rows = cursor.fetchall()
+    print("Total balances rows are: ", len(rows))
+    return rows

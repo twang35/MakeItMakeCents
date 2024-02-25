@@ -10,8 +10,8 @@ from database import *
 
 def charts():
     # manual settings #################
-    token = 'pepefork'
-    # token = 'altlayer'
+    token = pepefork
+    # token = altlayer
 
     # balance graph settings
     # 'balance', 'remaining_cost_basis', 'realized_gains'
@@ -25,7 +25,7 @@ def charts():
     conn = create_connection()
     cursor = conn.cursor()
 
-    prices = load_prices(cursor, token_addresses[token])
+    prices = load_prices(cursor, token.address)
 
     # create_balances_graph(token, balances_column, prices, cursor)
     create_urg_chart(token, chart_type, prices, cursor)
@@ -33,8 +33,7 @@ def charts():
 
 # displays largest 15 wallets for the selected balances_column from the balances table
 def create_balances_graph(token, balances_column, prices, cursor):
-    token_address = token_addresses[token]
-    largest_balances_rows = get_largest_balances(cursor, token_address, balances_column)
+    largest_balances_rows = get_largest_balances(cursor, token.address, balances_column)
     balances_map = compute_balances_map(largest_balances_rows, balances_column)
 
     create_balances_and_price_graph(prices, balances_map, balances_column, token)
@@ -44,11 +43,10 @@ def create_balances_graph(token, balances_column, prices, cursor):
 # each percentile of token balances (top 0.1%, top 1%, top 10%, etc.)
 def create_urg_chart(token, chart_type, prices, cursor):
     # load balances
-    token_address = token_addresses[token]
-    balances_rows = load_balances_table(cursor, token_address)
+    balances_rows = load_balances_table(cursor, token.address)
 
     # load prices
-    time_to_price, first_price_timestamp = get_price_map(cursor, token_address)
+    time_to_price, first_price_timestamp = get_price_map(cursor, token.address)
 
     # calculate URG
     timestamps, percentages = generate_percentiles(chart_type, balances_rows, time_to_price, first_price_timestamp)

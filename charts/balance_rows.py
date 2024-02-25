@@ -5,15 +5,15 @@ from plotly.subplots import make_subplots
 from charts.shared_charts import *
 
 filter_out_addresses = [
-    '0x3aF2ACB662A241da4ef4310C7AB226f552B42115', # Altlayer Airdrop Safe Smart Account
-    '0x9c7F0628ceE619953Fc395Cd7cF0576DCe1F505E', # PepeFork Airdrop contract
+    '0x3aF2ACB662A241da4ef4310C7AB226f552B42115',  # Altlayer Airdrop Safe Smart Account
+    '0x9c7F0628ceE619953Fc395Cd7cF0576DCe1F505E',  # PepeFork Airdrop contract
 ]
 
 
 def create_balances_and_price_graph(prices, balances_map, balances_column, token):
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     fig.update_layout(
-        title=dict(text=f'{token} {balances_column} top addresses', font=dict(size=25))
+        title=dict(text=f'{token.name} {balances_column} top addresses', font=dict(size=25))
     )
 
     for address in balances_map.keys():

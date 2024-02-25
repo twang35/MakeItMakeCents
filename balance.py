@@ -12,10 +12,12 @@ smallest_balance = 1e-12
 def run_balance():
     conn = create_connection()
 
-    compute_balances(conn, token_addresses['altlayer'])
+    token = altlayer
+
+    compute_balances(conn, token.address)
 
     # balances = get_balances_before(conn, '2024-02-14 13:00:00', altlayer_token_address)
-    balances = get_balances_before(conn, datetime.datetime.utcnow(), token_addresses['altlayer'])
+    balances = get_balances_before(conn, datetime.datetime.utcnow(), token.address)
     for i in range(100):
         print(balances[i])
 

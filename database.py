@@ -1,5 +1,6 @@
 import sqlite3
 import datetime
+from dataclasses import dataclass
 from sqlite3 import Error
 import persistqueue
 from eth_abi import decode
@@ -13,10 +14,15 @@ update_queue_path = r"/Users/tonywang/projects/stonks/update_queue.db"
 
 erc20_padding = 10 ** 18
 
-token_addresses = {
-    'altlayer': '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB',
-    'pepefork': '0xb9f599ce614Feb2e1BBe58F180F370D05b39344E'
-}
+
+@dataclass
+class Token:
+    name: str
+    address: str
+
+
+altlayer = Token('altlayer', '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB')
+pepefork = Token('pepefork', '0xb9f599ce614Feb2e1BBe58F180F370D05b39344E')
 
 
 def create_connection(db_file=database_path):
