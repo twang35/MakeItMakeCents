@@ -10,7 +10,7 @@ from database import *
 # then add exchange addresses as a category for balance percentile
 def run_volume():
     print('run_volume')
-    token = pepefork
+    token = mubi
 
     conn = create_connection()
     cursor = conn.cursor()
@@ -30,6 +30,8 @@ def run_volume():
 class Volume:
     buy: float
     sell: float
+    percent_buy_sell: float
+    total_volume: float
 
 
 def generate_volume(balances_rows, cursor, token_address):
@@ -54,6 +56,7 @@ def generate_volume(balances_rows, cursor, token_address):
     i = 0
     print_interval = datetime.timedelta(days=7)
     print_time = current_hour
+    granularity = datetime.timedelta(minutes=240)
 
     # while not end of balances
     while i < len(balances_rows):
@@ -63,7 +66,7 @@ def generate_volume(balances_rows, cursor, token_address):
 
         # get one hour of balances_rows
         i, to_process_rows = get_balances_changes(i=i, balances_rows=balances_rows,
-                                                  before_timestamp=current_hour + datetime.timedelta(minutes=60))
+                                                  before_timestamp=current_hour + granularity)
 
         # process changes to wallets map
         wallet_diffs = process_balances_changes(wallet_balances, to_process_rows)
@@ -72,7 +75,7 @@ def generate_volume(balances_rows, cursor, token_address):
         update_balance_percentiles(percentiles, wallet_diffs, wallet_percentiles)
         timestamps.append(str(current_hour))
 
-        current_hour += datetime.timedelta(minutes=60)
+        current_hour += granularity
 
     print(f'completed generate_percentiles: {time.time() - start}')
     return timestamps, percentiles
@@ -123,7 +126,7 @@ def process_balances_changes(wallet_balances, to_process_rows):
             wallet_balances[wallet_address] = 0
 
         if wallet_address not in diffs:
-            diffs[wallet_address] = Volume(0, 0)
+            diffs[wallet_address] = Volume(0, 0, 0, 0)
 
         new_balance = row[BalancesColumns.balance]
         diff = new_balance - wallet_balances[wallet_address]
@@ -140,12 +143,19 @@ def process_balances_changes(wallet_balances, to_process_rows):
 
 # add volume from wallet_diffs to percentiles
 def update_balance_percentiles(percentiles, wallet_diffs, wallet_percentiles):
-    for key in percentiles:
-        percentiles[key].append(Volume(0, 0))
+    for percentile in percentiles:
+        percentiles[percentile].append(Volume(0, 0, 0, 0))
 
     for wallet_address, volume in wallet_diffs.items():
         percentiles[wallet_percentiles[wallet_address]][-1].buy += volume.buy
         percentiles[wallet_percentiles[wallet_address]][-1].sell += volume.sell
+
+    # calculate percent_buy_sell and total_volume
+    for percentile in percentiles:
+        volume = percentiles[percentile][-1]
+        volume.total_volume = volume.buy - volume.sell  # sell is negative
+        volume.percent_buy_sell = 0 if volume.total_volume == 0\
+            else (volume.buy + volume.sell) / volume.total_volume * 100
 
 
 def create_volume_graph(prices, percentiles, timestamps, token, left_offset=0):
@@ -155,14 +165,16 @@ def create_volume_graph(prices, percentiles, timestamps, token, left_offset=0):
     )
 
     for percentile in percentiles.keys():
-        buy_data = [element.buy for element in percentiles[percentile]]
-        sell_data = [element.sell for element in percentiles[percentile]]
+        buy_sell_percentage_data = [element.percent_buy_sell for element in percentiles[percentile]]
+        total_volume = [element.total_volume for element in percentiles[percentile]]
         fig.add_trace(
-            go.Scatter(x=timestamps[left_offset:], y=buy_data[left_offset:], name=f'{percentile} buy'),
+            go.Scatter(x=timestamps[left_offset:],
+                       y=buy_sell_percentage_data[left_offset:],
+                       name=f'{percentile} buy/sell percent'),
             secondary_y=False,
         )
         fig.add_trace(
-            go.Scatter(x=timestamps[left_offset:], y=sell_data[left_offset:], name=f'{percentile} sell'),
+            go.Scatter(x=timestamps[left_offset:], y=total_volume[left_offset:], name=f'{percentile} total_volume'),
             secondary_y=False,
         )
     # fig.update_yaxes(type="log")
@@ -171,7 +183,7 @@ def create_volume_graph(prices, percentiles, timestamps, token, left_offset=0):
 
     fig.update_layout(legend_title_text='percentiles')
     # Set y-axes titles
-    fig.update_yaxes(title_text='token amount', range=[-10000000000000, 10000000000000], secondary_y=False)
+    fig.update_yaxes(title_text='token amount', range=[-100, 100], secondary_y=False)
     fig.update_yaxes(title_text="price", showspikes=True, secondary_y=True)
     fig.update_layout(hovermode="x unified")
     fig.show()
