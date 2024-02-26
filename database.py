@@ -278,6 +278,34 @@ def get_latest_wallet_balances(conn, token_address):
     return balances
 
 
+def get_largest_alltime_wallet_balances(cursor, token_address):
+    start_time = time.time()
+    query = f"""
+        SELECT 
+            *
+        FROM (
+            SELECT 
+                wallet_address, 
+                balance,
+                total_cost_basis,
+                remaining_cost_basis,
+                realized_gains,
+                ROW_NUMBER() OVER (PARTITION BY wallet_address ORDER BY balance DESC) AS row_num
+            FROM 
+                balances
+            WHERE 
+                token_address = '{token_address}'
+        ) AS ranked
+        WHERE 
+            row_num = 1;
+        """
+    cursor.execute(query)
+    balances = cursor.fetchall()
+    print("Total unique wallets are: ", len(balances))
+    print(f'query time: {time.time() - start_time}')
+    return balances
+
+
 def attach_queue(queue):
     """
     class AckStatus(object):

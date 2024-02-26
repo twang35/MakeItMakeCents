@@ -4,10 +4,10 @@ import plotly.graph_objects as go
 from database import *
 
 
-def add_price_trace(prices, fig):
+def add_price_trace(prices, fig, left_offset=0):
     # 0 price, 1 timestamp
-    prices_y = [row[0] for row in prices]
-    prices_timestamp = [row[1] for row in prices]
+    prices_y = [row[0] for row in prices][left_offset:]
+    prices_timestamp = [row[1] for row in prices][left_offset:]
 
     fig.add_trace(
         go.Scatter(x=prices_timestamp, y=prices_y, name="price", line=dict(color='black')),

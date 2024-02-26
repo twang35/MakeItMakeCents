@@ -10,16 +10,17 @@ smallest_balance = 1e-12
 
 
 def run_balance():
+    # create_balances_table()
     conn = create_connection()
 
-    token = altlayer
+    token = pepefork
 
     compute_balances(conn, token.address)
-
-    # balances = get_balances_before(conn, '2024-02-14 13:00:00', altlayer_token_address)
-    balances = get_balances_before(conn, datetime.datetime.utcnow(), token.address)
-    for i in range(100):
-        print(balances[i])
+    #
+    # # balances = get_balances_before(conn, '2024-02-14 13:00:00', altlayer_token_address)
+    # balances = get_balances_before(conn, datetime.datetime.utcnow(), token.address)
+    # for i in range(100):
+    #     print(balances[i])
 
 
 def get_balances_before(conn, timestamp, token_address):
@@ -93,7 +94,7 @@ def compute_balances(conn, token_address):
         value = txn[TransactionsColumns.value]
         price = get_price(time_to_price, first_price_timestamp, block_times[block])
 
-        if sender != null_address and (value < smallest_balance or (wallets[sender][0] == 0 and value < 1)):
+        if value < smallest_balance or (wallets[sender][0] == 0 and value < 1):
             # don't count if value is too small
             # or if wallet has 0 balance due to SQLite REAL number precision being too low
             continue
@@ -103,12 +104,12 @@ def compute_balances(conn, token_address):
 
         # row: wallet_address, token_address, timestamp, block, balance, total_cost_basis, remaining_cost_basis,
         #   realized_gains
+
         # sender
-        if sender != null_address:
-            balance, total_cost_basis, remaining_cost_basis, realized_gains = wallets[sender]
-            row = (sender, token_address, block_times[block], block,
-                   balance, total_cost_basis, remaining_cost_basis, realized_gains)
-            insert_balance(conn, row)
+        balance, total_cost_basis, remaining_cost_basis, realized_gains = wallets[sender]
+        row = (sender, token_address, block_times[block], block,
+               balance, total_cost_basis, remaining_cost_basis, realized_gains)
+        insert_balance(conn, row)
         # recipient
         balance, total_cost_basis, remaining_cost_basis, realized_gains = wallets[recipient]
         row = (recipient, token_address, block_times[block], block,
