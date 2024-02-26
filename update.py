@@ -15,13 +15,13 @@ def update():
     # only_print_queue(queue='update')
 
     # Update existing token #########################
-    update_all_data(xcad.address)
+    update_all_data(mubi.address)
 
     # Download new token #########################
-    # token_address = xcad.address
+    # token_address = mubi.address
     #
-    # start_txn_block = 12419395  # xcad started around 12429395
-    # start_price_time = datetime.datetime.fromisoformat('2021-05-12 00:45:59')
+    # start_txn_block = 18510688  # mubi started around 18520688
+    # start_price_time = datetime.datetime.fromisoformat('2023-11-05 00:45:59')
     #
     # update_all_data(token_address, new_token=True, start_txn_block=start_txn_block, start_price_time=start_price_time)
 

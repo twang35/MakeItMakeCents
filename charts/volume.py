@@ -74,6 +74,16 @@ def generate_volume(balances_rows):
     return timestamps, percentiles
 
 
+def process_balances_changes(wallets, to_process_rows):
+    # get all diffs from balances_rows and update the wallets
+    print('todo')
+
+
+def update_balance_percentiles(percentiles, wallet_diffs):
+    # add percentiles from wallet_diffs, will eventually need the wallet_to_percentile dict
+    print('todo')
+
+
 def create_volume_graph(prices, percentages, timestamps, token):
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     fig.update_layout(

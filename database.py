@@ -24,6 +24,7 @@ class Token:
 altlayer = Token('altlayer', '0x8457CA5040ad67fdebbCC8EdCE889A335Bc0fbFB')
 pepefork = Token('pepefork', '0xb9f599ce614Feb2e1BBe58F180F370D05b39344E')
 xcad = Token('xcad', '0x7659CE147D0e714454073a5dd7003544234b6Aa0')
+mubi = Token('mubi', '0x38e382F74dfb84608F3C1F10187f6bEf5951DE93')
 
 
 def create_connection(db_file=database_path):

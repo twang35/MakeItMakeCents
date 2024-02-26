@@ -68,10 +68,10 @@ def compute_balances(conn, token_address):
                                                                         latest_block=latest_block)
 
     # wallet_address: [balance, total_cost_basis, remaining_cost_basis, realized_gains]
-    wallets = {}
+    wallets = {null_address: [0, 0, 0, 0]}
     if latest_block != 0:
         # load the existing wallets from the balances table
-        wallets = build_wallets(get_latest_wallet_balances(conn, token_address))
+        build_wallets(wallets, get_latest_wallet_balances(conn, token_address))
 
     start = time.time()
     i = 0
@@ -103,21 +103,21 @@ def compute_balances(conn, token_address):
 
         # row: wallet_address, token_address, timestamp, block, balance, total_cost_basis, remaining_cost_basis,
         #   realized_gains
+        # sender
         if sender != null_address:
             balance, total_cost_basis, remaining_cost_basis, realized_gains = wallets[sender]
             row = (sender, token_address, block_times[block], block,
                    balance, total_cost_basis, remaining_cost_basis, realized_gains)
             insert_balance(conn, row)
-        if recipient != null_address:
-            balance, total_cost_basis, remaining_cost_basis, realized_gains = wallets[recipient]
-            row = (recipient, token_address, block_times[block], block,
-                   balance, total_cost_basis, remaining_cost_basis, realized_gains)
-            insert_balance(conn, row)
+        # recipient
+        balance, total_cost_basis, remaining_cost_basis, realized_gains = wallets[recipient]
+        row = (recipient, token_address, block_times[block], block,
+               balance, total_cost_basis, remaining_cost_basis, realized_gains)
+        insert_balance(conn, row)
 
 
-def build_wallets(balances_rows):
+def build_wallets(wallets, balances_rows):
     # wallet_address: [balance, total_cost_basis, remaining_cost_basis, realized_gains]
-    wallets = {}
     for row in balances_rows:
         wallet_address, token_balance, total_cost_basis, remaining_cost_basis, realized_gains, _ = row
         wallets[wallet_address] = [token_balance, total_cost_basis, remaining_cost_basis, realized_gains]
@@ -127,12 +127,12 @@ def build_wallets(balances_rows):
 
 def update_sender(wallets, sender, value, price, txn):
     if sender == null_address:
-        # do not subtract
+        # only calculate balance changes
         print(f'null address generated: {value}')
+        wallets[sender][0] -= value
         return
 
     # wallet_address: [balance, total_cost_basis, remaining_cost_basis, realized_gains]
-
     try:
         cost_sent = value / wallets[sender][0] * wallets[sender][2]
         # update remaining cost basis
@@ -149,11 +149,6 @@ def update_sender(wallets, sender, value, price, txn):
 
 
 def update_recipient(wallets, recipient, value, price):
-    if recipient == null_address or recipient == dead_address:
-        # do not add to null address
-        print(f'null address burned: {value}')
-        return
-
     # wallet_address: [balance, total_cost_basis, remaining_cost_basis, realized_gains]
     if recipient not in wallets:
         wallets[recipient] = [0, 0, 0, 0]

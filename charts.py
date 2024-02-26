@@ -12,7 +12,8 @@ def charts():
     # manual settings #################
     # token = pepefork
     # token = altlayer
-    token = xcad
+    # token = xcad
+    token = mubi
 
     # balance graph settings
     # 'balance', 'remaining_cost_basis', 'realized_gains'
