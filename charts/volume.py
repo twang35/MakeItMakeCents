@@ -10,7 +10,7 @@ from database import *
 # then add exchange addresses as a category for balance percentile
 def run_volume():
     print('run_volume')
-    token = mubi
+    token = pepefork
 
     conn = create_connection()
     cursor = conn.cursor()
@@ -23,7 +23,7 @@ def run_volume():
     timestamps, percentiles = generate_volume(balances_rows, cursor, token.address)
 
     # generate hourly graph
-    create_volume_graph(prices, percentiles, timestamps, token, left_offset=3)
+    create_volume_graph(prices, percentiles, timestamps, token, left_offset=1)
 
 
 @dataclass
@@ -159,7 +159,8 @@ def update_balance_percentiles(percentiles, wallet_diffs, wallet_percentiles):
 
 
 def create_volume_graph(prices, percentiles, timestamps, token, left_offset=0):
-    fig = make_subplots(specs=[[{"secondary_y": True}]])
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02,
+                        specs=[[{"secondary_y": True}], [{"secondary_y": True}]],)
     fig.update_layout(
         title=dict(text=f'{token.name} volume', font=dict(size=25))
     )
@@ -172,20 +173,29 @@ def create_volume_graph(prices, percentiles, timestamps, token, left_offset=0):
                        y=buy_sell_percentage_data[left_offset:],
                        name=f'{percentile} buy/sell percent'),
             secondary_y=False,
+            row=1, col=1,
         )
         fig.add_trace(
             go.Scatter(x=timestamps[left_offset:], y=total_volume[left_offset:], name=f'{percentile} total_volume'),
             secondary_y=False,
+            row=2, col=1,
         )
     # fig.update_yaxes(type="log")
+    fig.update_yaxes(type="log", row=2)
 
-    add_price_trace(prices, fig, left_offset=100)
+    add_price_trace(prices, fig, left_offset=10, row=1)
+    add_price_trace(prices, fig, left_offset=10, row=2)
 
     fig.update_layout(legend_title_text='percentiles')
     # Set y-axes titles
-    fig.update_yaxes(title_text='token amount', range=[-100, 100], secondary_y=False)
+    fig.update_yaxes(title_text='percent buy/sell', row=1, secondary_y=False)
+    fig.update_yaxes(title_text='token amount', row=2, secondary_y=False)
     fig.update_yaxes(title_text="price", showspikes=True, secondary_y=True)
-    fig.update_layout(hovermode="x unified")
+
+    fig.update_layout(hovermode="x unified", xaxis_showticklabels=True)
+    fig.update_traces(xaxis="x1")
+    fig.update_xaxes(spikemode='across+marker')
+    print(fig.layout)
     fig.show()
 
 

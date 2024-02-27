@@ -10,10 +10,10 @@ from database import *
 
 def charts():
     # manual settings #################
-    # token = pepefork
+    token = pepefork
     # token = altlayer
     # token = xcad
-    token = mubi
+    # token = mubi
 
     # balance graph settings
     # 'balance', 'remaining_cost_basis', 'realized_gains'
