@@ -181,15 +181,15 @@ def create_volume_graph(prices, percentiles, timestamps, token, left_offset=0):
             row=2, col=1,
         )
     # fig.update_yaxes(type="log")
-    fig.update_yaxes(type="log", row=2)
 
     add_price_trace(prices, fig, left_offset=10, row=1)
     add_price_trace(prices, fig, left_offset=10, row=2)
 
     fig.update_layout(legend_title_text='percentiles')
     # Set y-axes titles
+    fig.update_yaxes(type="log", row=2, secondary_y=False)
     fig.update_yaxes(title_text='percent buy/sell', row=1, secondary_y=False)
-    fig.update_yaxes(title_text='token amount', row=2, secondary_y=False)
+    fig.update_yaxes(title_text='token volume', row=2, secondary_y=False)
     fig.update_yaxes(title_text="price", showspikes=True, secondary_y=True)
 
     fig.update_layout(hovermode="x unified", xaxis_showticklabels=True)
