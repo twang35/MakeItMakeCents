@@ -10,7 +10,7 @@ from database import *
 # then add exchange addresses as a category for balance percentile
 def run_volume():
     print('run_volume')
-    token = pepefork
+    token = mubi
 
     conn = create_connection()
     cursor = conn.cursor()
@@ -56,7 +56,7 @@ def generate_volume(balances_rows, cursor, token_address):
     i = 0
     print_interval = datetime.timedelta(days=7)
     print_time = current_hour
-    granularity = datetime.timedelta(minutes=240)
+    granularity = datetime.timedelta(minutes=120)
 
     # while not end of balances
     while i < len(balances_rows):
@@ -195,7 +195,6 @@ def create_volume_graph(prices, percentiles, timestamps, token, left_offset=0):
     fig.update_layout(hovermode="x unified", xaxis_showticklabels=True)
     fig.update_traces(xaxis="x1")
     fig.update_xaxes(spikemode='across+marker')
-    print(fig.layout)
     fig.show()
 
 

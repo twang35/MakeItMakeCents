@@ -136,20 +136,22 @@ def create_balances_table():
 
 
 class KnownAddressesColumns:
-    name = 'known_addresses'
+    table_name = 'known_addresses'
     wallet_address = 0
-    name_tag = 1
+    name = 1
     type = 2
     description = 3
+    etherscan_labels = 4
 
 
 def create_known_addresses_table():
     sql_create_table = """ CREATE TABLE IF NOT EXISTS known_addresses (
                                         wallet_address TEXT NOT NULL,
-                                        name_tag TEXT NOT NULL,
+                                        name TEXT NOT NULL,
                                         type TEXT,
                                         description TEXT,
-                                        PRIMARY KEY (wallet_address, type)
+                                        etherscan_labels TEXT,
+                                        PRIMARY KEY (wallet_address)
                                         ); """
 
     create_table(sql_create_table)
@@ -207,6 +209,18 @@ def insert_balance(conn, row):
      total_cost_basis, remaining_cost_basis, realized_gains) VALUES(?,?,?,?,?,?,?,?);'''
     cur = conn.cursor()
     cur.execute(sql, row)
+    conn.commit()
+
+
+def insert_known_addresses(conn, row):
+    sql = '''INSERT OR REPLACE INTO known_addresses(wallet_address, name, type, description, etherscan_labels) 
+     VALUES(?,?,?,?,?);'''
+    insert_row(conn, row, sql)
+
+
+def insert_row(conn, row, insert_sql):
+    cur = conn.cursor()
+    cur.execute(insert_sql, row)
     conn.commit()
 
 
