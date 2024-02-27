@@ -135,6 +135,26 @@ def create_balances_table():
     create_table(sql_create_balances_table)
 
 
+class KnownAddressesColumns:
+    name = 'known_addresses'
+    wallet_address = 0
+    name_tag = 1
+    type = 2
+    description = 3
+
+
+def create_known_addresses_table():
+    sql_create_table = """ CREATE TABLE IF NOT EXISTS known_addresses (
+                                        wallet_address TEXT NOT NULL,
+                                        name_tag TEXT NOT NULL,
+                                        type TEXT,
+                                        description TEXT,
+                                        PRIMARY KEY (wallet_address, type)
+                                        ); """
+
+    create_table(sql_create_table)
+
+
 def create_table(create_sql):
     conn = create_connection()
     c = conn.cursor()
