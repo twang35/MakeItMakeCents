@@ -1,3 +1,4 @@
+import json
 import sqlite3
 import datetime
 from dataclasses import dataclass
@@ -138,16 +139,17 @@ def create_balances_table():
 class KnownAddressesColumns:
     table_name = 'known_addresses'
     wallet_address = 0
-    name = 1
+    wallet_name = 1
     type = 2
     description = 3
     etherscan_labels = 4
+    column_names = ['wallet_address', 'wallet_name', 'type', 'description', 'etherscan_labels']
 
 
 def create_known_addresses_table():
     sql_create_table = """ CREATE TABLE IF NOT EXISTS known_addresses (
                                         wallet_address TEXT NOT NULL,
-                                        name TEXT NOT NULL,
+                                        wallet_name TEXT,
                                         type TEXT,
                                         description TEXT,
                                         etherscan_labels TEXT,
@@ -213,14 +215,33 @@ def insert_balance(conn, row):
 
 
 def insert_known_addresses(conn, row):
-    sql = '''INSERT OR REPLACE INTO known_addresses(wallet_address, name, type, description, etherscan_labels) 
-     VALUES(?,?,?,?,?);'''
-    insert_row(conn, row, sql)
-
-
-def insert_row(conn, row, insert_sql):
     cur = conn.cursor()
-    cur.execute(insert_sql, row)
+
+    non_null_row = []
+    columns = []
+    values = []
+    update_set = []
+    i = 0
+
+    for column_name in KnownAddressesColumns.column_names:
+        # skip columns with None
+        if row[i] is None:
+            continue
+        non_null_row.append(row[i])
+        columns.append(column_name + ',')
+        values.append('?,')
+        update_set.append(f'{column_name}=excluded.{column_name},')
+        i += 1
+
+    # remove last comma from all generated strings
+    columns_string = ''.join(columns)[:-1]
+    values_string = ''.join(values)[:-1]
+    update_set_string = ''.join(update_set)[:-1]
+
+    sql = f'''INSERT INTO known_addresses({columns_string}) VALUES ({values_string}) 
+     ON CONFLICT(wallet_address) DO UPDATE SET {update_set_string};'''
+
+    cur.execute(sql, non_null_row)
     conn.commit()
 
 
@@ -338,6 +359,25 @@ def get_largest_alltime_wallet_balances(cursor, token_address):
     print("Total unique wallets are: ", len(balances))
     print(f'query time: {time.time() - start_time}')
     return balances
+
+
+def get_all_known_addresses(conn):
+    cursor = conn.cursor()
+    query = f"""
+        SELECT *
+        FROM known_addresses;
+        """
+    cursor.execute(query)
+    rows = cursor.fetchall()
+    result = []
+
+    # convert json string etherscan_labels to list of labels
+    for row in rows:
+        result.append(list(row))
+        labels = row[KnownAddressesColumns.etherscan_labels]
+        if labels is not None:
+            result[-1][KnownAddressesColumns.etherscan_labels] = json.loads(labels)
+    return result
 
 
 def attach_queue(queue):
