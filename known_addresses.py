@@ -1,8 +1,11 @@
 from database import *
 import json
+from snippets.manual_addresses import address_types
 
 
 def run_known_addresses():
+    create_known_addresses_table()
+    write_addresses()
     read_addresses('binance')
 
 
@@ -16,7 +19,7 @@ def read_addresses(search_term):
 
 
 def write_addresses():
-    search_term = 'kucoin'
+    search_term = 'binance'
 
     # create_known_addresses_table()
     conn = create_connection()

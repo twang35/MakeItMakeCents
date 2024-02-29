@@ -140,17 +140,17 @@ class KnownAddressesColumns:
     table_name = 'known_addresses'
     wallet_address = 0
     wallet_name = 1
-    type = 2
+    types = 2
     description = 3
     etherscan_labels = 4
-    column_names = ['wallet_address', 'wallet_name', 'type', 'description', 'etherscan_labels']
+    column_names = ['wallet_address', 'wallet_name', 'types', 'description', 'etherscan_labels']
 
 
 def create_known_addresses_table():
     sql_create_table = """ CREATE TABLE IF NOT EXISTS known_addresses (
                                         wallet_address TEXT NOT NULL,
                                         wallet_name TEXT,
-                                        type TEXT,
+                                        types TEXT,
                                         description TEXT,
                                         etherscan_labels TEXT,
                                         PRIMARY KEY (wallet_address)
@@ -226,6 +226,7 @@ def insert_known_addresses(conn, row):
     for column_name in KnownAddressesColumns.column_names:
         # skip columns with None
         if row[i] is None:
+            i += 1
             continue
         non_null_row.append(row[i])
         columns.append(column_name + ',')
@@ -371,12 +372,15 @@ def get_all_known_addresses(conn):
     rows = cursor.fetchall()
     result = []
 
-    # convert json string etherscan_labels to list of labels
+    # convert json strings into lists
     for row in rows:
         result.append(list(row))
         labels = row[KnownAddressesColumns.etherscan_labels]
         if labels is not None:
             result[-1][KnownAddressesColumns.etherscan_labels] = json.loads(labels)
+        types = row[KnownAddressesColumns.types]
+        if types is not None:
+            result[-1][KnownAddressesColumns.types] = json.loads(types)
     return result
 
 
