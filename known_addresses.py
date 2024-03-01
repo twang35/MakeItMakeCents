@@ -14,8 +14,15 @@ def read_addresses(search_term):
 
     known_addresses = get_all_known_addresses(conn)
 
-    for address_data in known_addresses:
-        print(address_data)
+    found_addresses = [item for item in known_addresses
+                       if (item[KnownAddressesColumns.wallet_name] is not None
+                           and search_term in item[KnownAddressesColumns.wallet_name])
+                       or (item[KnownAddressesColumns.etherscan_labels] is not None
+                           and any(search_term in label.lower()
+                                   for label in item[KnownAddressesColumns.etherscan_labels]))]
+
+    for address in found_addresses:
+        print(address)
 
 
 def write_addresses():
