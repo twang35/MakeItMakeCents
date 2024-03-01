@@ -11,7 +11,7 @@ def run_known_addresses():
     # write_addresses(search_term, conn)
     # search_addresses(search_term)
     save_hard_coded_wallets(conn)
-    save_all_manual_addresses(conn)
+    # save_all_manual_addresses(conn)
 
     print('run_known_addresses completed')
 

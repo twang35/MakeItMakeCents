@@ -10,7 +10,7 @@ from database import *
 # then add exchange addresses as a category for balance percentile
 def run_volume():
     print('run_volume')
-    token = mubi
+    token = pepefork
 
     conn = create_connection()
     cursor = conn.cursor()
@@ -70,10 +70,10 @@ def generate_volume(balances_rows, cursor, token_address):
                                            before_timestamp=current_hour + granularity)
 
         # process changes to wallets map
-        wallet_diffs = process_balances_changes(wallet_balances, to_process_rows)
+        volume_totals = process_balances_changes(wallet_balances, to_process_rows)
 
         # update percentiles
-        update_balance_percentiles(percentiles, wallet_diffs, wallet_percentiles)
+        update_balance_percentiles(percentiles, volume_totals, wallet_percentiles)
         timestamps.append(str(current_hour))
 
         current_hour += granularity
@@ -94,35 +94,39 @@ def build_wallets(wallets, balances_rows):
 # get all diffs from balances_rows and update the wallets
 def process_balances_changes(wallet_balances, to_process_rows):
     # wallet_address: volume
-    diffs = {}
+    volume_totals = {}
 
     for row in to_process_rows:
         wallet_address = row[BalancesColumns.wallet_address]
         if wallet_address not in wallet_balances:
             wallet_balances[wallet_address] = 0
 
-        if wallet_address not in diffs:
-            diffs[wallet_address] = Volume(0, 0, 0, 0)
-
         new_balance = row[BalancesColumns.balance]
-        diff = new_balance - wallet_balances[wallet_address]
 
-        if diff > 0:
-            diffs[wallet_address].buy += diff
-        else:
-            diffs[wallet_address].sell += diff
+        diff = new_balance - wallet_balances[wallet_address]
+        update_volume(volume_totals, wallet_address, diff)
 
         wallet_balances[wallet_address] = new_balance
 
-    return diffs
+    return volume_totals
+
+
+def update_volume(volume_totals, wallet_address, value):
+    if wallet_address not in volume_totals:
+        volume_totals[wallet_address] = Volume(0, 0, 0, 0)
+
+    if value > 0:
+        volume_totals[wallet_address].buy += value
+    else:
+        volume_totals[wallet_address].sell += value
 
 
 # add volume from wallet_diffs to percentiles
-def update_balance_percentiles(percentiles, wallet_diffs, wallet_percentiles):
+def update_balance_percentiles(percentiles, volume_totals, wallet_percentiles):
     for percentile in percentiles:
         percentiles[percentile].append(Volume(0, 0, 0, 0))
 
-    for wallet_address, volume in wallet_diffs.items():
+    for wallet_address, volume in volume_totals.items():
         percentiles[wallet_percentiles[wallet_address]][-1].buy += volume.buy
         percentiles[wallet_percentiles[wallet_address]][-1].sell += volume.sell
 
@@ -134,11 +138,11 @@ def update_balance_percentiles(percentiles, wallet_diffs, wallet_percentiles):
             else (volume.buy + volume.sell) / volume.total_volume * 100
 
 
-def create_volume_graph(prices, percentiles, timestamps, token, left_offset=0):
+def create_volume_graph(prices, percentiles, timestamps, token, left_offset=0, alt_title=None):
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02,
                         specs=[[{"secondary_y": True}], [{"secondary_y": True}]], )
     fig.update_layout(
-        title=dict(text=f'{token.name} volume', font=dict(size=25))
+        title=dict(text=f'{token.name} volume' if alt_title is None else alt_title, font=dict(size=25))
     )
 
     for percentile in percentiles.keys():
@@ -156,7 +160,6 @@ def create_volume_graph(prices, percentiles, timestamps, token, left_offset=0):
             secondary_y=False,
             row=2, col=1,
         )
-    # fig.update_yaxes(type="log")
 
     add_price_trace(prices, fig, left_offset=10, row=1)
     add_price_trace(prices, fig, left_offset=10, row=2)

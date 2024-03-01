@@ -1,4 +1,3 @@
-
 # known_addresses column_names = ['wallet_address', 'wallet_name', 'types', 'description', 'etherscan_labels']
 wallet_details = [
     # Bybit CEX
@@ -50,8 +49,22 @@ wallet_details = [
     # LBank
     ['0x120051a72966950b8ce12eb5496b5d1eeec1541b', 'LBank hot wallet', '["CEX"]', None, '["exchange"]'],
     ['0xe5a8b35eaa3c14e0a6514f800825e1e6687bf23e', 'LBank hot wallet 4', '["CEX"]', None, '["exchange"]'],
+    # Uniswap
+    ['0xf164fC0Ec4E93095b804a4795bBe1e041497b92a', 'Uniswap V2: Router', '["DEX"]', None, '["exchange"]'],
+    ['0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', 'Uniswap V2: Router 2', '["DEX"]', None, '["exchange"]'],
+    ['0x3A76621EC895124BADC1fc36d58F3b1265363540', 'Uniswap V2: Router 3', '["DEX"]', None, '["exchange"]'],
+    ['0xE592427A0AEce92De3Edee1F18E0157C05861564', 'Uniswap V3: Router', '["DEX"]', None, '["exchange"]'],
+    ['0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45', 'Uniswap V3: Router 2', '["DEX"]', None, '["exchange"]'],
+    ['0x090D4613473dEE047c3f2706764f49E0821D256e', 'Uniswap: Token Distributor', '["DEX"]', None, '["exchange"]'],
     # misc exchanges
     ['0x6cc8dCbCA746a6E4Fdefb98E1d0DF903b107fd21', 'Bitrue', '["CEX"]', None, '["exchange"]'],
+    # PepeFork
+    ['0x3c6768c697131391e138a360a2ef6709ff7df000', 'Uniswap V3: PORK 2', '["DEX"]', None, '["exchange"]'],
+    ['0x331399c614cA67DEe86733E5A2FBA40DbB16827c', 'Uniswap V3: PORK 3', '["DEX"]', None, '["exchange"]'],
+    ['0x080844467Fe96f1c73501fD22B9A51C985c1915E', 'Uniswap V3: PORK 4', '["DEX"]', "fake pepefork",
+     '["exchange"]'],
+    ['0xB9ed555632c308f0f44489500045A9AFba73473c', 'Uniswap V3: PORK 5', '["DEX"]', None, '["exchange"]'],
+
 ]
 
 # currently the lower address types overwrite any previously existing label

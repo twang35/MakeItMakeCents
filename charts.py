@@ -17,7 +17,7 @@ def charts():
 
     # balance graph settings
     # 'balance', 'remaining_cost_basis', 'realized_gains'
-    balances_column = 'realized_gains'
+    balances_column = 'balance'
 
     # unrealized gains graph settings
     chart_type = urg_percent_by_holdings
@@ -29,8 +29,8 @@ def charts():
 
     prices = load_prices(cursor, token.address)
 
-    # create_balances_graph(token, balances_column, prices, cursor)
-    create_urg_chart(token, chart_type, prices, cursor)
+    create_balances_graph(token, balances_column, prices, cursor)
+    # create_urg_chart(token, chart_type, prices, cursor)
 
 
 # displays largest 15 wallets for the selected balances_column from the balances table

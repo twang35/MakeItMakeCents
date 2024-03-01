@@ -338,11 +338,7 @@ def get_largest_alltime_wallet_balances(cursor, token_address):
             *
         FROM (
             SELECT 
-                wallet_address, 
-                balance,
-                total_cost_basis,
-                remaining_cost_basis,
-                realized_gains,
+                *,
                 ROW_NUMBER() OVER (PARTITION BY wallet_address ORDER BY balance DESC) AS row_num
             FROM 
                 balances
@@ -355,7 +351,7 @@ def get_largest_alltime_wallet_balances(cursor, token_address):
     cursor.execute(query)
     balances = cursor.fetchall()
     print("Total unique wallets are: ", len(balances))
-    print(f'query time: {time.time() - start_time}')
+    print(f'get_largest_alltime_wallet_balances query time: {time.time() - start_time}')
     return balances
 
 

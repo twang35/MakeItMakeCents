@@ -120,7 +120,7 @@ def generate_wallet_percentiles(cursor, percentiles, token_address):
     balances_rows = get_largest_alltime_wallet_balances(cursor, token_address)
 
     # balances: [(balance, wallet_address), ()...]
-    balances = [(row[1], row[0]) for row in balances_rows]
+    balances = [(row[BalancesColumns.balance], row[BalancesColumns.wallet_address]) for row in balances_rows]
     balances.sort(reverse=True)
 
     i = 0

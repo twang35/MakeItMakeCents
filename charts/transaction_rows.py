@@ -1,6 +1,7 @@
 from plotly.subplots import make_subplots
 from charts.shared_charts import *
 from balance import *
+from volume import *
 
 
 def run_transaction_rows():
@@ -13,17 +14,18 @@ def run_transaction_rows():
     timestamps, percentiles = generate_exchange_volume(cursor, token.address)
 
     # generate hourly graph
-    create_volume_graph(prices, percentiles, timestamps, token, left_offset=1)
+    prices = load_prices(cursor, token.address)
+    create_volume_graph(prices, percentiles, timestamps, token, left_offset=1,
+                        alt_title=f'{token.name} exchange volume')
 
     print('completed run_transaction_rows')
 
 
 def generate_exchange_volume(cursor, token_address):
-    print(f'running generate_volume')
+    print(f'running generate_exchange_volume')
 
     start = time.time()
-    # wallet_address: [balance, total_cost_basis, remaining_cost_basis, realized_gains]
-    wallets = {null_address: [0, 0, 0, 0]}
+    wallets = {null_address: WalletInfo(null_address)}
     timestamps = []
     percentiles = {  # balances are bucketed down
         0.1: [],
@@ -40,9 +42,8 @@ def generate_exchange_volume(cursor, token_address):
     # get first hour
     current_hour = datetime.datetime.fromisoformat(txns[0][TransactionsColumns.timestamp][:-5] + '00:00')
 
-    start = time.time()
     i = 0
-    last_i = 0
+    last_i = -1  # to avoid divide by zero error on first pass
     txn_i = 0
     print_interval = datetime.timedelta(days=7)
     print_time = current_hour
@@ -68,10 +69,10 @@ def generate_exchange_volume(cursor, token_address):
                                                before_timestamp=current_hour + granularity)
 
         # process changes to wallets map
-        txn_totals = process_txns(wallets, to_process_rows, token_address, price_grabber)
+        volume_totals = process_txns(wallets, to_process_rows, price_grabber, defi_addresses)
 
         # update percentiles
-        update_balance_percentiles(percentiles, txn_totals, wallet_percentiles)
+        update_balance_percentiles(percentiles, volume_totals, wallet_percentiles)
         timestamps.append(str(current_hour))
 
         current_hour += granularity
@@ -80,15 +81,16 @@ def generate_exchange_volume(cursor, token_address):
     return timestamps, percentiles
 
 
-def process_txns(wallet_balances, to_process_rows, price_grabber):
-    totals = {}
+def process_txns(wallets, to_process_rows, price_grabber, defi_addresses):
+    # wallet_address: volume
+    volume_totals = {}
 
     for txn in to_process_rows:
         block = txn[TransactionsColumns.block_number]
         sender = txn[TransactionsColumns.sender]
         recipient = txn[TransactionsColumns.recipient]
         value = txn[TransactionsColumns.value]
-        price = price_grabber.get_price(block)
+        price = price_grabber.get_price_from_block(block)
 
         if value_too_small(value, wallets, sender):
             continue
@@ -96,6 +98,12 @@ def process_txns(wallet_balances, to_process_rows, price_grabber):
         update_sender(wallets, sender, value, price, txn)
         update_recipient(wallets, recipient, value, price)
 
+        # only count defi traffic
+        if sender in defi_addresses or recipient in defi_addresses:
+            update_volume(volume_totals, sender, value * -1)  # negative value as the sender is selling
+            update_volume(volume_totals, recipient, value)
+
+    return volume_totals
 
 
 def get_all_defi_addresses(cursor):

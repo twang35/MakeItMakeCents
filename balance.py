@@ -179,9 +179,9 @@ class PriceGrabber:
         self.first_price_timestamp = first_price_timestamp
 
     def get_price_from_block(self, block):
-        return self.get_price(self.block_times[block])
+        return self.get_price_from_time(self.block_times[block])
 
-    def get_price(self, timestamp):
+    def get_price_from_time(self, timestamp):
         return self.time_to_price[timestamp] if timestamp >= self.first_price_timestamp else 0
 
 
