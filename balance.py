@@ -58,18 +58,24 @@ def get_balances_before(conn, timestamp, token_address):
     return balances
 
 
+class WalletInfo:
+    def __init__(self, address, balance=0, total_cost_basis=0, remaining_cost_basis=0, realized_gains=0):
+        self.address = address
+        self.balance = balance
+        self.total_cost_basis = total_cost_basis
+        self.remaining_cost_basis = remaining_cost_basis
+        self.realized_gains = realized_gains
+
+
 def compute_balances(conn, token_address):
     # compute from the latest block in the balances table or start computing from the earliest txn
     latest_block = get_latest_balances_block(conn, token_address)
     latest_block = 0 if latest_block is None else latest_block
 
     cursor = conn.cursor()
-    txns, block_times, time_to_price, first_price_timestamp = load_data(cursor=cursor,
-                                                                        token_address=token_address,
-                                                                        latest_block=latest_block)
+    txns, block_times, price_grabber = load_data(cursor=cursor, token_address=token_address, latest_block=latest_block)
 
-    # wallet_address: [balance, total_cost_basis, remaining_cost_basis, realized_gains]
-    wallets = {null_address: [0, 0, 0, 0]}
+    wallets = {null_address: WalletInfo(null_address)}
     if latest_block != 0:
         # load the existing wallets from the balances table
         build_wallets(wallets, get_latest_wallet_balances(conn, token_address))
@@ -92,11 +98,9 @@ def compute_balances(conn, token_address):
         recipient = txn[TransactionsColumns.recipient]
         token_address = txn[TransactionsColumns.token_address]
         value = txn[TransactionsColumns.value]
-        price = get_price(time_to_price, first_price_timestamp, block_times[block])
+        price = price_grabber.get_price_from_block(block)
 
-        if value < smallest_balance or (wallets[sender][0] == 0 and value < 1):
-            # don't count if value is too small
-            # or if wallet has 0 balance due to SQLite REAL number precision being too low
+        if value_too_small(value, wallets, sender):
             continue
 
         update_sender(wallets, sender, value, price, txn)
@@ -106,42 +110,52 @@ def compute_balances(conn, token_address):
         #   realized_gains
 
         # sender
-        balance, total_cost_basis, remaining_cost_basis, realized_gains = wallets[sender]
+        wallet_info = wallets[sender]
         row = (sender, token_address, block_times[block], block,
-               balance, total_cost_basis, remaining_cost_basis, realized_gains)
+               wallet_info.balance, wallet_info.total_cost_basis, wallet_info.remaining_cost_basis,
+               wallet_info.realized_gains)
         insert_balance(conn, row)
         # recipient
-        balance, total_cost_basis, remaining_cost_basis, realized_gains = wallets[recipient]
+        wallet_info = wallets[recipient]
         row = (recipient, token_address, block_times[block], block,
-               balance, total_cost_basis, remaining_cost_basis, realized_gains)
+               wallet_info.balance, wallet_info.total_cost_basis, wallet_info.remaining_cost_basis,
+               wallet_info.realized_gains)
         insert_balance(conn, row)
 
 
 def build_wallets(wallets, balances_rows):
     # wallet_address: [balance, total_cost_basis, remaining_cost_basis, realized_gains]
     for row in balances_rows:
-        wallet_address, token_balance, total_cost_basis, remaining_cost_basis, realized_gains, _ = row
-        wallets[wallet_address] = [token_balance, total_cost_basis, remaining_cost_basis, realized_gains]
+        wallets[row[BalancesColumns.wallet_address]] = WalletInfo(row[BalancesColumns.wallet_address],
+                                                                  row[BalancesColumns.balance],
+                                                                  row[BalancesColumns.total_cost_basis],
+                                                                  row[BalancesColumns.remaining_cost_basis],
+                                                                  realized_gains=0)
 
     return wallets
+
+
+def value_too_small(value, wallets, sender):
+    if value < smallest_balance or (wallets[sender].balance == 0 and value < 1):
+        # don't count if value is too small
+        # or if wallet has 0 balance due to SQLite REAL number precision being too low
+        return True
+    return False
 
 
 def update_sender(wallets, sender, value, price, txn):
     if sender == null_address:
         # only calculate balance changes
         print(f'null address generated: {value}')
-        wallets[sender][0] -= value
+        wallets[sender].balance -= value
         return
 
-    # wallet_address: [balance, total_cost_basis, remaining_cost_basis, realized_gains]
     try:
-        cost_sent = value / wallets[sender][0] * wallets[sender][2]
-        # update remaining cost basis
-        wallets[sender][2] -= cost_sent
-        # update balance
-        wallets[sender][0] -= value
-        # update realized gain
-        wallets[sender][3] += price * value - cost_sent
+        # calculate cost_sent before updating the balance
+        cost_sent = value / wallets[sender].balance * wallets[sender].remaining_cost_basis
+        wallets[sender].remaining_cost_basis -= cost_sent
+        wallets[sender].balance -= value
+        wallets[sender].realized_gains += price * value - cost_sent
     except:
         print(f'\ncaught an exception:\n'
               f'txn row: block_number, transaction_index, log_index, timestamp, sender, recipient, token_address, value'
@@ -150,16 +164,25 @@ def update_sender(wallets, sender, value, price, txn):
 
 
 def update_recipient(wallets, recipient, value, price):
-    # wallet_address: [balance, total_cost_basis, remaining_cost_basis, realized_gains]
     if recipient not in wallets:
-        wallets[recipient] = [0, 0, 0, 0]
+        wallets[recipient] = WalletInfo(recipient)
 
-    # update balance
-    wallets[recipient][0] += value
-    # update total cost basis
-    wallets[recipient][1] += price * value
-    # update remaining cost basis
-    wallets[recipient][2] += price * value
+    wallets[recipient].balance += value
+    wallets[recipient].total_cost_basis += price * value
+    wallets[recipient].remaining_cost_basis += price * value
+
+
+class PriceGrabber:
+    def __init__(self, block_times, time_to_price, first_price_timestamp):
+        self.block_times = block_times
+        self.time_to_price = time_to_price
+        self.first_price_timestamp = first_price_timestamp
+
+    def get_price_from_block(self, block):
+        return self.get_price(self.block_times[block])
+
+    def get_price(self, timestamp):
+        return self.time_to_price[timestamp] if timestamp >= self.first_price_timestamp else 0
 
 
 def load_data(cursor, token_address, latest_block):
@@ -186,7 +209,7 @@ def load_data(cursor, token_address, latest_block):
     time_to_price, first_price_timestamp = get_price_map(cursor, token_address)
 
     print(f'load_data time: {time.time() - start}s')
-    return txns, block_times, time_to_price, first_price_timestamp
+    return txns, block_times, PriceGrabber(block_times, time_to_price, first_price_timestamp)
 
 
 def to_block_times_map(block_times_rows):

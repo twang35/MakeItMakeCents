@@ -65,8 +65,9 @@ def generate_volume(balances_rows, cursor, token_address):
             print_time += print_interval
 
         # get one hour of balances_rows
-        i, to_process_rows = get_balances_changes(i=i, balances_rows=balances_rows,
-                                                  before_timestamp=current_hour + granularity)
+        i, to_process_rows = get_next_rows(i=i, table_rows=balances_rows,
+                                           timestamp_column_num=BalancesColumns.timestamp,
+                                           before_timestamp=current_hour + granularity)
 
         # process changes to wallets map
         wallet_diffs = process_balances_changes(wallet_balances, to_process_rows)
@@ -79,31 +80,6 @@ def generate_volume(balances_rows, cursor, token_address):
 
     print(f'completed generate_percentiles: {time.time() - start}')
     return timestamps, percentiles
-
-
-def generate_wallet_percentiles(cursor, percentiles, token_address):
-    wallet_percentiles = {}
-
-    # load the existing wallets from the balances table
-    balances_rows = get_largest_alltime_wallet_balances(cursor, token_address)
-
-    # balances: [(balance, wallet_address), ()...]
-    balances = [(row[1], row[0]) for row in balances_rows]
-    balances.sort(reverse=True)
-
-    i = 0
-    percentile_i = -1
-    for key in percentiles.keys():
-        # update percentile_i to the location of the end of the percentile key
-        if i > percentile_i:
-            percentile_i = (key / 100 * len(balances)) - 1
-
-        # add the percentile key mapping to all addresses under that percentile_i
-        while i < len(balances) and i <= percentile_i:
-            wallet_percentiles[balances[i][1]] = key
-            i += 1
-
-    return wallet_percentiles
 
 
 def build_wallets(wallets, balances_rows):
@@ -154,13 +130,13 @@ def update_balance_percentiles(percentiles, wallet_diffs, wallet_percentiles):
     for percentile in percentiles:
         volume = percentiles[percentile][-1]
         volume.total_volume = volume.buy - volume.sell  # sell is negative
-        volume.percent_buy_sell = 0 if volume.total_volume == 0\
+        volume.percent_buy_sell = 0 if volume.total_volume == 0 \
             else (volume.buy + volume.sell) / volume.total_volume * 100
 
 
 def create_volume_graph(prices, percentiles, timestamps, token, left_offset=0):
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02,
-                        specs=[[{"secondary_y": True}], [{"secondary_y": True}]],)
+                        specs=[[{"secondary_y": True}], [{"secondary_y": True}]], )
     fig.update_layout(
         title=dict(text=f'{token.name} volume', font=dict(size=25))
     )

@@ -62,7 +62,8 @@ def create_transactions_table():
                                         recipient TEXT NOT NULL,
                                         token_address TEXT NOT NULL,
                                         value REAL NOT NULL,
-                                        PRIMARY KEY (recipient, token_address, block_number, transaction_index, log_index)
+                                        PRIMARY KEY (recipient, token_address, block_number, transaction_index, 
+                                         log_index)
                                         ); """
 
     create_table(sql_create_transactions_table)
@@ -313,11 +314,7 @@ def get_latest_wallet_balances(conn, token_address):
             *
         FROM (
             SELECT 
-                wallet_address, 
-                balance,
-                total_cost_basis,
-                remaining_cost_basis,
-                realized_gains,
+                *,
                 ROW_NUMBER() OVER (PARTITION BY wallet_address ORDER BY block_number DESC) AS row_num
             FROM 
                 balances
@@ -362,8 +359,7 @@ def get_largest_alltime_wallet_balances(cursor, token_address):
     return balances
 
 
-def get_all_known_addresses(conn):
-    cursor = conn.cursor()
+def get_all_known_addresses(cursor):
     query = f"""
         SELECT *
         FROM known_addresses;

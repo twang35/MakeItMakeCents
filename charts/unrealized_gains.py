@@ -110,8 +110,9 @@ def generate_percentiles(chart_type, balances_rows, time_to_price, first_price_t
             print_time += print_interval
 
         # get one hour of balances_rows
-        i, to_process_rows = get_balances_changes(i=i, balances_rows=balances_rows,
-                                                  before_timestamp=current_hour + datetime.timedelta(minutes=60))
+        i, to_process_rows = get_next_rows(i=i, table_rows=balances_rows,
+                                           timestamp_column_num=BalancesColumns.timestamp,
+                                           before_timestamp=current_hour + datetime.timedelta(minutes=60))
 
         # use price at the end of the hour to calculate all price movements from the current hour
         price = get_price(time_to_price, first_price_timestamp, str(current_hour + datetime.timedelta(minutes=60)))

@@ -8,7 +8,7 @@ def run_known_addresses():
     conn = create_connection()
 
     search_term = 'kucoin'
-    # write_addresses(search_term)
+    # write_addresses(search_term, conn)
     # search_addresses(search_term)
     save_hard_coded_wallets(conn)
     save_all_manual_addresses(conn)
@@ -16,10 +16,8 @@ def run_known_addresses():
     print('run_known_addresses completed')
 
 
-def search_addresses(search_term):
-    conn = create_connection()
-
-    known_addresses = get_all_known_addresses(conn)
+def search_addresses(search_term, conn):
+    known_addresses = get_all_known_addresses(conn.cursor())
 
     found_addresses = [item for item in known_addresses
                        if (item[KnownAddressesColumns.wallet_name] is not None

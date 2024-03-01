@@ -77,6 +77,18 @@ def get_price(time_to_price, first_price_timestamp, timestamp):
     return time_to_price[timestamp] if timestamp >= first_price_timestamp else 0
 
 
+def load_transactions_table(cursor, token_address):
+    query = f"""
+        SELECT * FROM transactions
+        WHERE token_address = '{token_address}'
+        ORDER BY block_number, log_index;
+        """
+    cursor.execute(query)
+    rows = cursor.fetchall()
+    print("Total balances rows are: ", len(rows))
+    return rows
+
+
 def load_balances_table(cursor, token_address):
     query = f"""
         SELECT * FROM balances
@@ -90,12 +102,37 @@ def load_balances_table(cursor, token_address):
 
 
 # essentially a paginated way to get the next hour of balances_rows changes
-def get_balances_changes(i, balances_rows, before_timestamp):
+def get_next_rows(i, table_rows, timestamp_column_num, before_timestamp):
     before_str = str(before_timestamp)
     output = []
 
-    while i < len(balances_rows) and balances_rows[i][BalancesColumns.timestamp] < before_str:
-        output.append(balances_rows[i])
+    while i < len(table_rows) and table_rows[i][timestamp_column_num] < before_str:
+        output.append(table_rows[i])
         i += 1
 
     return i, output
+
+
+def generate_wallet_percentiles(cursor, percentiles, token_address):
+    wallet_percentiles = {}
+
+    # load the existing wallets from the balances table
+    balances_rows = get_largest_alltime_wallet_balances(cursor, token_address)
+
+    # balances: [(balance, wallet_address), ()...]
+    balances = [(row[1], row[0]) for row in balances_rows]
+    balances.sort(reverse=True)
+
+    i = 0
+    percentile_i = -1
+    for key in percentiles.keys():
+        # update percentile_i to the location of the end of the percentile key
+        if i > percentile_i:
+            percentile_i = (key / 100 * len(balances)) - 1
+
+        # add the percentile key mapping to all addresses under that percentile_i
+        while i < len(balances) and i <= percentile_i:
+            wallet_percentiles[balances[i][1]] = key
+            i += 1
+
+    return wallet_percentiles

@@ -12,13 +12,13 @@ from price import batch_price_date_increment, process_price_dates
 
 
 def update():
-    # only_print_queue(queue='update')
+    check_queue_size(queue='update')
 
     # Update existing token #########################
-    update_all_data(altlayer)
+    # update_all_data(altlayer)
     update_all_data(pepefork)
-    update_all_data(xcad)
-    update_all_data(mubi)
+    # update_all_data(xcad)
+    # update_all_data(mubi)
 
     # Download new token #########################
     # token_address = mubi.address
@@ -27,6 +27,16 @@ def update():
     # start_price_time = datetime.datetime.fromisoformat('2023-11-05 00:45:59')
     #
     # update_all_data(token_address, new_token=True, start_txn_block=start_txn_block, start_price_time=start_price_time)
+
+
+def check_queue_size(queue):
+    q = attach_queue(queue)
+    q_size = q.qsize()
+    if q_size == 0:
+        print(f'queue size: {q_size}')
+    else:
+        if input(f'queue size: {q_size} \nCancel processing (y, n): ').lower() == 'y':
+            exit()
 
 
 def update_all_data(token, new_token=False, start_txn_block=None, start_price_time=None):
