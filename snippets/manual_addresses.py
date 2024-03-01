@@ -54,6 +54,7 @@ wallet_details = [
     ['0x6cc8dCbCA746a6E4Fdefb98E1d0DF903b107fd21', 'Bitrue', '["CEX"]', None, '["exchange"]'],
 ]
 
+# currently the lower address types overwrite any previously existing label
 address_types = {
     'exchange': 'DeFi',
 
