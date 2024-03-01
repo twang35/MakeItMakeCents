@@ -57,4 +57,5 @@ def create_urg_chart(token, chart_type, prices, cursor):
     create_unrealized_gains_graph(prices, percentages, timestamps, token, chart_type)
 
 
-charts()
+if __name__ == "__main__":
+    charts()

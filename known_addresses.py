@@ -93,4 +93,5 @@ def save_hard_coded_wallets(conn):
         insert_known_addresses(conn, row)
 
 
-run_known_addresses()
+if __name__ == "__main__":
+    run_known_addresses()
