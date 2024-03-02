@@ -37,6 +37,11 @@ def generate_exchange_volume(cursor, token_address):
     wallet_percentiles = generate_wallet_percentiles(cursor, percentiles, token_address)
     defi_addresses = get_all_defi_addresses(cursor)
 
+    # add exchange percentile
+    percentiles['exchange'] = []
+    for defi_address in defi_addresses.keys():
+        wallet_percentiles[defi_address] = 'exchange'
+
     txns, block_times, price_grabber = load_data(cursor=cursor, token_address=token_address, latest_block=0)
 
     # get first hour
