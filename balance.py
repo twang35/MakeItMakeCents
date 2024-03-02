@@ -130,7 +130,7 @@ def build_wallets(wallets, balances_rows):
                                                                   row[BalancesColumns.balance],
                                                                   row[BalancesColumns.total_cost_basis],
                                                                   row[BalancesColumns.remaining_cost_basis],
-                                                                  realized_gains=0)
+                                                                  row[BalancesColumns.realized_gains])
 
     return wallets
 
