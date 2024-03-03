@@ -50,6 +50,7 @@ wallet_details = [
     ['0x120051a72966950b8ce12eb5496b5d1eeec1541b', 'LBank hot wallet', '["CEX"]', None, '["exchange"]'],
     ['0xe5a8b35eaa3c14e0a6514f800825e1e6687bf23e', 'LBank hot wallet 4', '["CEX"]', None, '["exchange"]'],
     # Uniswap
+    ['0x3fc91a3afd70395cd496c647d5a6cc9d4b2b7fad', 'Uniswap: Universal Router', '["DEX"]', None, '["exchange"]'],
     ['0xf164fC0Ec4E93095b804a4795bBe1e041497b92a', 'Uniswap V2: Router', '["DEX"]', None, '["exchange"]'],
     ['0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', 'Uniswap V2: Router 2', '["DEX"]', None, '["exchange"]'],
     ['0x3A76621EC895124BADC1fc36d58F3b1265363540', 'Uniswap V2: Router 3', '["DEX"]', None, '["exchange"]'],
@@ -64,7 +65,10 @@ wallet_details = [
     ['0x080844467Fe96f1c73501fD22B9A51C985c1915E', 'Uniswap V3: PORK 4', '["DEX"]', "fake pepefork",
      '["exchange"]'],
     ['0xB9ed555632c308f0f44489500045A9AFba73473c', 'Uniswap V3: PORK 5', '["DEX"]', None, '["exchange"]'],
-
+    ['0xc026eB864dc9F9E820e010DdeeEB3c7cBaEbf365', 'Uniswap V3: PNDC-PORK', '["DEX"]', None, '["exchange"]'],
+    ['0xc47c20f194c4dede0fb63fa4e29bcc04b37c778a', 'Uniswap V2: PORK 22', '["DEX"]', None, '["exchange"]'],
+    ['0x0e97691dc077dbd945e2fbbfa056823f12eb8c52', 'Uniswap V3: PEPE-PORK', '["DEX"]', None, '["exchange"]'],
+    ['0x3c0cbad9538a3efdc3fd393a0997d88e59a8a64d', 'Uniswap V3: USDC-PORK', '["DEX"]', None, '["exchange"]'],
 ]
 
 # currently the lower address types overwrite any previously existing label
