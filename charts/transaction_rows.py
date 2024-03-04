@@ -105,6 +105,8 @@ def generate_exchange_volume(cursor, token_address):
         print(sorted_txn_counts[i])
         largest_received_from = [(count, address) for address, count in sorted_txn_counts[i][2].received_from.items()]
         largest_received_from.sort(reverse=True)
+        largest_sent_to = [(count, address) for address, count in sorted_txn_counts[i][2].sent_to.items()]
+        largest_sent_to.sort(reverse=True)
         print('sorted')
 
     print(f'completed generate_percentiles: {time.time() - start}')
@@ -134,7 +136,6 @@ def process_txns(wallets, to_process_rows, price_grabber, defi_addresses, txn_co
         txn_count[sender].sent_to[recipient] += 1
         txn_count[recipient].received_count += 1
         txn_count[recipient].received_from[sender] += 1
-
 
         update_sender(wallets, sender, value, price, txn)
         update_recipient(wallets, recipient, value, price)

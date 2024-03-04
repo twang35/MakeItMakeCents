@@ -3,10 +3,8 @@ wallet_details = [
     # Bybit CEX
     ['0xf89d7b9c864f589bbF53a82105107622B35EaA40', 'Bybit: hot wallet', '["CEX"]', None, '["exchange"]'],
     ['0xee5B5B923fFcE93A870B3104b7CA09c3db80047A', 'Bybit: cold? wallet', '["CEX"]', None, '["exchange"]'],
-    ['0x1Db92e2EeBC8E0c075a02BeA49a2935BcD2dFCF4', 'Bybit exchange safe smart account 1', '["CEX"]', None,
-     '["exchange"]'],
-    ['0xA7A93fd0a276fc1C0197a5B5623eD117786eeD06', 'Bybit exchange safe smart account 2', '["CEX"]', None,
-     '["exchange"]'],
+    ['0x1Db92e2EeBC8E0c075a02BeA49a2935BcD2dFCF4', 'Bybit exchange safe smart account 1', '["CEX"]', None, '["exchange"]'],
+    ['0xA7A93fd0a276fc1C0197a5B5623eD117786eeD06', 'Bybit exchange safe smart account 2', '["CEX"]', None, '["exchange"]'],
     # HTX CEX
     ['0xaB5C66752a9e8167967685F1450532fB96d5d24f', 'HTX 1', '["CEX"]', None, '["exchange"]'],
     ['0x6748F50f686bfbcA6Fe8ad62b22228b87F31ff2b', 'HTX 2', '["CEX"]', None, '["exchange"]'],
@@ -59,6 +57,8 @@ wallet_details = [
     ['0x090D4613473dEE047c3f2706764f49E0821D256e', 'Uniswap: Token Distributor', '["DEX"]', None, '["exchange"]'],
     # misc exchanges
     ['0x6cc8dCbCA746a6E4Fdefb98E1d0DF903b107fd21', 'Bitrue', '["CEX"]', None, '["exchange"]'],
+    ['0x74de5d4FCbf63E00296fd95d33236B9794016631', 'Airswap Router', '["DEX"]', "I think this is a router", '["exchange"]'],
+    ['0xE37e799D5077682FA0a244D46E5649F71457BD09', '1inch Router', '["DEX"]', "I think this is a router", '["exchange"]'],
     # PepeFork
     ['0x3c6768c697131391e138a360a2ef6709ff7df000', 'Uniswap V3: PORK 2', '["DEX"]', None, '["exchange"]'],
     ['0x331399c614cA67DEe86733E5A2FBA40DbB16827c', 'Uniswap V3: PORK 3', '["DEX"]', None, '["exchange"]'],
