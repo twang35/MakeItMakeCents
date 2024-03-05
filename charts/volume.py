@@ -20,10 +20,10 @@ def run_volume():
     prices = load_prices(cursor, token.address)
 
     # calculate sum of diffs and add to chart output
-    timestamps, percentiles = generate_volume(balances_rows, cursor, token.address)
+    timestamps, percentiles = generate_volume(balances_rows, cursor, token.address, granularity=datetime.timedelta(minutes=120))
 
     # generate hourly graph
-    create_volume_graph(prices, percentiles, timestamps, token, left_offset=1)
+    create_volume_graph(prices, percentiles, timestamps, token, left_offset=1, view_date_start='2024-02-16 00:00:00')
 
 
 @dataclass
@@ -34,7 +34,7 @@ class Volume:
     total_volume: float
 
 
-def generate_volume(balances_rows, cursor, token_address):
+def generate_volume(balances_rows, cursor, token_address, granularity=datetime.timedelta(minutes=120)):
     print(f'running generate_volume')
 
     start = time.time()
@@ -56,7 +56,6 @@ def generate_volume(balances_rows, cursor, token_address):
     i = 0
     print_interval = datetime.timedelta(days=7)
     print_time = current_hour
-    granularity = datetime.timedelta(minutes=120)
 
     # while not end of balances
     while i < len(balances_rows):
@@ -138,12 +137,27 @@ def update_balance_percentiles(percentiles, volume_totals, wallet_percentiles):
             else (volume.buy + volume.sell) / volume.total_volume * 100
 
 
-def create_volume_graph(prices, percentiles, timestamps, token, left_offset=0, alt_title=None):
+def create_volume_graph(prices, percentiles, timestamps, token, left_offset=0, alt_title=None, view_date_start=None):
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02,
                         specs=[[{"secondary_y": True}], [{"secondary_y": True}]], )
     fig.update_layout(
         title=dict(text=f'{token.name} volume' if alt_title is None else alt_title, font=dict(size=25))
     )
+
+    price_left_offset = 10
+    if view_date_start is not None:
+        i = 0
+        while i < len(prices):
+            if prices[i][1] > view_date_start:
+                break
+            i += 1
+        price_left_offset = i
+        i = 0
+        while i < len(prices):
+            if timestamps[i] > view_date_start:
+                break
+            i += 1
+        left_offset = i
 
     for percentile in percentiles.keys():
         buy_sell_percentage_data = [element.percent_buy_sell for element in percentiles[percentile]]
@@ -161,8 +175,8 @@ def create_volume_graph(prices, percentiles, timestamps, token, left_offset=0, a
             row=2, col=1,
         )
 
-    add_price_trace(prices, fig, left_offset=10, row=1)
-    add_price_trace(prices, fig, left_offset=10, row=2)
+    add_price_trace(prices, fig, left_offset=price_left_offset, row=1)
+    add_price_trace(prices, fig, left_offset=price_left_offset, row=2)
 
     fig.update_layout(legend_title_text='percentiles')
     # Set y-axes titles
