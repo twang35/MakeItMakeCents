@@ -69,6 +69,7 @@ wallet_details = [
     ['0xc47c20f194c4dede0fb63fa4e29bcc04b37c778a', 'Uniswap V2: PORK 22', '["DEX"]', None, '["exchange"]'],
     ['0x0e97691dc077dbd945e2fbbfa056823f12eb8c52', 'Uniswap V3: PEPE-PORK', '["DEX"]', None, '["exchange"]'],
     ['0x3c0cbad9538a3efdc3fd393a0997d88e59a8a64d', 'Uniswap V3: USDC-PORK', '["DEX"]', None, '["exchange"]'],
+    ['0x0e1ea51dc94009e05b5001e49cbe0e47dc327238', 'Solidity V3: PORK', '["DEX"]', None, '["exchange"]'],
 ]
 
 # currently the lower address types overwrite any previously existing label

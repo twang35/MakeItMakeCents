@@ -48,6 +48,7 @@ def generate_exchange_volume(cursor, token_address):
     }
     wallet_percentiles = generate_wallet_percentiles(cursor, percentiles, token_address)
     defi_addresses = get_all_defi_addresses(cursor)
+    # defi_addresses = get_only_uniswap_addresses(cursor)
 
     # add exchange percentile
     percentiles['exchange'] = []
@@ -154,6 +155,18 @@ def get_all_defi_addresses(cursor):
     defi_addresses = {}
     for row in known_addresses_rows:
         defi_addresses[row[KnownAddressesColumns.wallet_address]] = row
+
+    return defi_addresses
+
+
+def get_only_uniswap_addresses(cursor):
+    known_addresses_rows = get_all_known_addresses(cursor)
+
+    defi_addresses = {}
+    for row in known_addresses_rows:
+        if (row[KnownAddressesColumns.wallet_name] is not None
+                and 'uniswap' in row[KnownAddressesColumns.wallet_name].lower()):
+            defi_addresses[row[KnownAddressesColumns.wallet_address]] = row
 
     return defi_addresses
 

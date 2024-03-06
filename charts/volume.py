@@ -20,10 +20,10 @@ def run_volume():
     prices = load_prices(cursor, token.address)
 
     # calculate sum of diffs and add to chart output
-    timestamps, percentiles = generate_volume(balances_rows, cursor, token.address, granularity=datetime.timedelta(minutes=120))
+    timestamps, percentπiles = generate_volume(balances_rows, cursor, token.address, granularity=datetime.timedelta(minutes=10))
 
     # generate hourly graph
-    create_volume_graph(prices, percentiles, timestamps, token, left_offset=1, view_date_start='2024-02-16 00:00:00')
+    create_volume_graph(prices, percentiles, timestamps, token, left_offset=1, view_date_start='2024-03-02 00:00:00')
 
 
 @dataclass
