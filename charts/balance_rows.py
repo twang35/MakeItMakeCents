@@ -28,6 +28,9 @@ def create_balances_and_price_graph(prices, balances_map, balances_column, token
     # Set y-axes titles
     fig.update_yaxes(title_text=balances_column, secondary_y=False)
     fig.update_yaxes(title_text="price", secondary_y=True)
+
+    fig.update_layout(hovermode="x unified", xaxis_showticklabels=True)
+    fig.update_xaxes(spikemode='across+marker')
     fig.show()
 
 

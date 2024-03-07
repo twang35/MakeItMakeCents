@@ -123,15 +123,19 @@ def generate_wallet_percentiles(cursor, percentiles, token_address):
     balances = [(row[BalancesColumns.balance], row[BalancesColumns.wallet_address]) for row in balances_rows]
     balances.sort(reverse=True)
 
+    percentile_debug = {}
     i = 0
     percentile_i = -1
     for key in percentiles.keys():
+        if key not in percentile_debug:
+            percentile_debug[key] = []
         # update percentile_i to the location of the end of the percentile key
         if i > percentile_i:
             percentile_i = (key / 100 * len(balances)) - 1
 
         # add the percentile key mapping to all addresses under that percentile_i
         while i < len(balances) and i <= percentile_i:
+            percentile_debug[key].append(balances[i][1])
             wallet_percentiles[balances[i][1]] = key
             i += 1
 

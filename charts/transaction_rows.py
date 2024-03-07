@@ -13,12 +13,13 @@ def run_transaction_rows():
     cursor = conn.cursor()
 
     # calculate balances using txns and produce chart output
-    timestamps, percentiles = generate_exchange_volume(cursor, token.address)
+    timestamps, percentiles = generate_exchange_volume(cursor, token.address,
+                                                       granularity=datetime.timedelta(minutes=60))
 
     # generate hourly graph
     prices = load_prices(cursor, token.address)
     create_volume_graph(prices, percentiles, timestamps, token, left_offset=1,
-                        alt_title=f'{token.name} exchange volume')
+                        alt_title=f'{token.name} exchange volume',  view_date_start='2024-03-02 00:00:00')
 
     print('completed run_transaction_rows')
 
@@ -33,7 +34,7 @@ class TxnCounts:
         self.received_from = defaultdict(lambda: 0, self.received_from)
 
 
-def generate_exchange_volume(cursor, token_address):
+def generate_exchange_volume(cursor, token_address, granularity):
     print(f'running generate_exchange_volume')
 
     start = time.time()
@@ -65,7 +66,6 @@ def generate_exchange_volume(cursor, token_address):
     txn_i = 0
     print_interval = datetime.timedelta(days=7)
     print_time = current_hour
-    granularity = datetime.timedelta(minutes=120)
 
     txn_counts = {}
 
@@ -97,7 +97,8 @@ def generate_exchange_volume(cursor, token_address):
 
         current_hour += granularity
 
-    # debug info
+    # debug info ##############
+    # get largest txn addresses
     sorted_txn_counts = [(txn_count.sent_count + txn_count.received_count, address, txn_count)
                          for address, txn_count in txn_counts.items()]
     sorted_txn_counts.sort(reverse=True)
