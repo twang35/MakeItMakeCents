@@ -139,4 +139,17 @@ def generate_wallet_percentiles(cursor, percentiles, token_address):
             wallet_percentiles[balances[i][1]] = key
             i += 1
 
-    return wallet_percentiles
+    return wallet_percentiles, percentile_debug
+
+
+def get_percentile_addresses(cursor, token_address, percentile):
+    percentiles = {  # balances are bucketed down
+        0.1: [],
+        1: [],
+        10: [],
+        50: [],
+        100: [],
+    }
+    _, wallets_by_percentile = generate_wallet_percentiles(cursor, percentiles, token_address)
+
+    return wallets_by_percentile[percentile]

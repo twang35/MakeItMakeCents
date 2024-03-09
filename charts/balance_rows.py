@@ -10,16 +10,17 @@ filter_out_addresses = [
 ]
 
 
-def create_balances_and_price_graph(prices, balances_map, balances_column, token):
+def create_balances_and_price_graph(prices, balances_map, balances_column, token, left_offset=0, alt_title=None):
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     fig.update_layout(
-        title=dict(text=f'{token.name} {balances_column} top addresses', font=dict(size=25))
+        title=dict(text=f'{token.name} {balances_column} top addresses' if alt_title is None else alt_title,
+                   font=dict(size=25))
     )
 
     for address in balances_map.keys():
         # address: [balances_column, timestamps]
         fig.add_trace(
-            go.Scatter(x=balances_map[address][1], y=balances_map[address][0], name=address),
+            go.Scatter(x=balances_map[address][1][left_offset:], y=balances_map[address][0][left_offset:], name=address),
             secondary_y=False,
         )
 
@@ -94,6 +95,48 @@ def get_largest_column_wallets(cursor, token_address, balances_column, after_tim
     cursor.execute(find_largest_wallets_query)
     largest_wallets_rows = cursor.fetchall()
     print(f'get_largest_realized_gains_wallets time: {time.time() - start_time}')
+    return [row[0] for row in largest_wallets_rows]
+
+
+def get_largest_balances_for_addresses(cursor, token_address, balances_column, addresses, after_timestamp=None):
+    largest_wallets = get_largest_column_for_addresses(cursor, token_address, balances_column, addresses,
+                                                       after_timestamp=after_timestamp)
+    return load_balances(cursor, token_address, largest_wallets)
+
+
+def get_largest_column_for_addresses(cursor, token_address, balances_column, addresses, after_timestamp=None):
+    start_time = time.time()
+    after_timestamp_string = '' if after_timestamp is None else f"AND timestamp >= '{after_timestamp}'"
+    find_largest_wallets_query = f"""
+        SELECT * 
+        FROM (
+            SELECT 
+              wallet_address, 
+              timestamp, 
+              balance, 
+              total_cost_basis, 
+              remaining_cost_basis, 
+              realized_gains, 
+              ROW_NUMBER() OVER (
+                PARTITION BY wallet_address 
+                ORDER BY 
+                  {balances_column} DESC
+              ) AS row_num 
+            FROM 
+              balances 
+            WHERE 
+              token_address = '{token_address}'
+              AND wallet_address IN ({to_sql_collection_string(addresses)})
+              {after_timestamp_string}
+        ) AS ranked 
+        WHERE 
+            row_num = 1 
+        ORDER BY 
+          {balances_column} DESC;
+        """
+    cursor.execute(find_largest_wallets_query)
+    largest_wallets_rows = cursor.fetchall()
+    print(f'get_largest_column_for_addresses time: {time.time() - start_time}')
     return [row[0] for row in largest_wallets_rows]
 
 

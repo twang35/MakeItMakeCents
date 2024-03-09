@@ -19,7 +19,7 @@ def run_transaction_rows():
     # generate hourly graph
     prices = load_prices(cursor, token.address)
     create_volume_graph(prices, percentiles, timestamps, token, left_offset=1,
-                        alt_title=f'{token.name} exchange volume',  view_date_start='2024-03-02 00:00:00')
+                        alt_title=f'{token.name} exchange volume', view_date_start='2024-03-02 00:00:00')
 
     print('completed run_transaction_rows')
 
@@ -47,7 +47,7 @@ def generate_exchange_volume(cursor, token_address, granularity):
         50: [],
         100: [],
     }
-    wallet_percentiles = generate_wallet_percentiles(cursor, percentiles, token_address)
+    wallet_percentiles, _ = generate_wallet_percentiles(cursor, percentiles, token_address)
     defi_addresses = get_all_defi_addresses(cursor)
     # defi_addresses = get_only_uniswap_addresses(cursor)
 

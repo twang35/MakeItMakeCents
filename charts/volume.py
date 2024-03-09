@@ -49,7 +49,7 @@ def generate_volume(balances_rows, cursor, token_address, granularity=datetime.t
         50: [],
         100: [],
     }
-    wallet_percentiles = generate_wallet_percentiles(cursor, percentiles, token_address)
+    wallet_percentiles, _ = generate_wallet_percentiles(cursor, percentiles, token_address)
 
     # get first hour
     current_hour = datetime.datetime.fromisoformat(balances_rows[0][BalancesColumns.timestamp][:-5] + '00:00')

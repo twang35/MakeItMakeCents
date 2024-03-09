@@ -30,6 +30,7 @@ def charts():
     prices = load_prices(cursor, token.address)
 
     create_balances_graph(token, balances_column, prices, cursor)
+    create_balances_by_percentile_graph(token, balances_column, prices, cursor)
     # create_urg_chart(token, chart_type, prices, cursor)
 
 
@@ -38,7 +39,18 @@ def create_balances_graph(token, balances_column, prices, cursor):
     largest_balances_rows = get_largest_balances(cursor, token.address, balances_column)
     balances_map = compute_balances_map(largest_balances_rows, balances_column)
 
-    create_balances_and_price_graph(prices, balances_map, balances_column, token)
+    create_balances_and_price_graph(prices, balances_map, balances_column, token, left_offset=4)
+
+
+# displays largest 15 wallets for the selected balances_column from the balances table
+def create_balances_by_percentile_graph(token, balances_column, prices, cursor):
+    percentile = 0.1
+    addresses = get_percentile_addresses(cursor, token.address, percentile)
+    largest_balances_rows = get_largest_balances_for_addresses(cursor, token.address, balances_column, addresses)
+    balances_map = compute_balances_map(largest_balances_rows, balances_column)
+
+    create_balances_and_price_graph(prices, balances_map, balances_column, token, left_offset=4,
+                                    alt_title=f'{token.name} {balances_column} {percentile} top addresses')
 
 
 # display unrealized gains data depending on the chart_type, ie urg_percent_by_holdings shows how much urg percent for
