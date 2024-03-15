@@ -134,6 +134,7 @@ def run_td3_bot(argv):
             print(f'steps/sec: {EVAL_INTERVAL / (time.time() - start)}')
             # append to both train and eval to keep them with the same number
             eval_reward = eval_policy(policy, eval_env, TRACK_SEED)
+            print(f'eval reward: {eval_reward}')
             train_rewards.append(episode_reward)
             eval_rewards.append(eval_reward)
 
