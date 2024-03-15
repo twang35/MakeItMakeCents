@@ -31,11 +31,11 @@ TRACK_SEED = 123
 # TRACK_SEED = random.randint(1, 100000)
 # TRACK_SEED = 12147  # first corner sharp high speed
 
-# EVAL_ONLY = False
-# LOAD_FILE = ''
-EVAL_ONLY = True
+EVAL_ONLY = False
+LOAD_FILE = ''
+# EVAL_ONLY = True
 # LOAD_FILE = 'models/saved/term3_overfit'
-LOAD_FILE = 'models/default_model'
+# LOAD_FILE = 'models/default_model'
 
 if LOAD_FILE == 'models/saved/term3' or LOAD_FILE == 'models/term3':
     HIDDEN_DIM_1 = 512
@@ -83,6 +83,8 @@ def run_td3_bot(argv):
         eval_policy(policy, eval_env, TRACK_SEED)  # ANOTHER!!
         return
 
+    start = time.time()
+
     for t in range(1, MAX_TRAIN_TIMESTEPS + 1):
         episode_timesteps += 1
 
@@ -129,6 +131,7 @@ def run_td3_bot(argv):
                            timestep=t, max_training_reward=max_train_reward)
 
         if t % EVAL_INTERVAL == 0:
+            print(f'steps/sec: {EVAL_INTERVAL / (time.time() - start)}')
             # append to both train and eval to keep them with the same number
             eval_reward = eval_policy(policy, eval_env, TRACK_SEED)
             train_rewards.append(episode_reward)
@@ -142,6 +145,8 @@ def run_td3_bot(argv):
 
             plot_durations(test_rewards=eval_rewards, train_rewards=train_rewards,
                            timestep=t, max_training_reward=max_train_reward)
+
+            start = time.time()
 
     plot_durations(test_rewards=eval_rewards, train_rewards=train_rewards, show_result=True,
                    timestep=MAX_TRAIN_TIMESTEPS+1, max_training_reward=max_train_reward)

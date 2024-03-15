@@ -4,8 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# device = torch.device("cpu")
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Implementation of Twin Delayed Deep Deterministic Policy Gradients (TD3)
 # Paper: https://arxiv.org/abs/1802.09477
@@ -31,7 +30,7 @@ class Actor(nn.Module):
 
 
 class Critic(nn.Module):
-    def __init__(self, state_dim, action_dim, hidden_dim_1, hidden_dim_2,):
+    def __init__(self, state_dim, action_dim, hidden_dim_1, hidden_dim_2):
         super(Critic, self).__init__()
 
         # Q1 architecture
@@ -78,14 +77,15 @@ class TD3(object):
             policy_noise=0.2,   # Noise added to target policy during critic update
             noise_clip=0.5,     # Range to clip target policy noise
             policy_freq=2,      # Frequency of delayed policy updates
-            learning_rate=3e-4  # Learning rate for the actor and critic nets
+            learning_rate=3e-4, # Learning rate for the actor and critic nets
+            device=torch.device("cpu")
     ):
 
         self.actor = Actor(state_dim, action_dim, hidden_dim_1, hidden_dim_2, max_action).to(device)
         self.actor_target = copy.deepcopy(self.actor)
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=learning_rate)
 
-        self.critic = Critic(state_dim, action_dim, hidden_dim_1, hidden_dim_2, ).to(device)
+        self.critic = Critic(state_dim, action_dim, hidden_dim_1, hidden_dim_2).to(device)
         self.critic_target = copy.deepcopy(self.critic)
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=learning_rate)
 
@@ -96,10 +96,12 @@ class TD3(object):
         self.noise_clip = noise_clip
         self.policy_freq = policy_freq
 
+        self.device = device
+
         self.total_it = 0
 
     def select_action(self, state):
-        state = torch.FloatTensor(state.reshape(1, -1)).to(device)
+        state = torch.FloatTensor(state.reshape(1, -1))
         return self.actor(state).cpu().data.numpy().flatten()
 
     def train(self, replay_buffer, batch_size=256):
@@ -160,10 +162,10 @@ class TD3(object):
         torch.save(self.actor_optimizer.state_dict(), filename + "_actor_optimizer")
 
     def load(self, filename):
-        self.critic.load_state_dict(torch.load(filename + "_critic", map_location=torch.device('cpu')))
-        self.critic_optimizer.load_state_dict(torch.load(filename + "_critic_optimizer", map_location=torch.device('cpu')))
+        self.critic.load_state_dict(torch.load(filename + "_critic", map_location=self.device))
+        self.critic_optimizer.load_state_dict(torch.load(filename + "_critic_optimizer", map_location=self.device))
         self.critic_target = copy.deepcopy(self.critic)
 
-        self.actor.load_state_dict(torch.load(filename + "_actor", map_location=torch.device('cpu')))
-        self.actor_optimizer.load_state_dict(torch.load(filename + "_actor_optimizer", map_location=torch.device('cpu')))
+        self.actor.load_state_dict(torch.load(filename + "_actor", map_location=self.device))
+        self.actor_optimizer.load_state_dict(torch.load(filename + "_actor_optimizer", map_location=self.device))
         self.actor_target = copy.deepcopy(self.actor)
