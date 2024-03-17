@@ -37,6 +37,18 @@ def load_prices(cursor, token_address):
     return prices
 
 
+class TimestampData:
+    def __init__(self, data, timestamps):
+        self.data = data
+        self.timestamps = timestamps
+        self.first_hour = datetime.datetime.fromisoformat(timestamps[0][:-5] + '00:00') if type(timestamps[0]) is str else timestamps[0]
+
+
+def load_structured_prices(cursor, token_address):
+    prices = load_prices(cursor, token_address)
+    return TimestampData([row[0] for row in prices], [row[1] for row in prices])
+
+
 def get_price_map(cursor, token_address):
     query = f"""
             SELECT * FROM prices

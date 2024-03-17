@@ -545,7 +545,7 @@ class CarRacing(gym.Env, EzPickle):
         state.append(speed[0][0])
         # wheel angle
         state.append(self.car.wheels[0].joint.angle)  # range -0.42 to 0.42 on front wheels
-        return state, step_reward, terminated, truncated
+        return state, step_reward, terminated, truncated, {}
 
     def calc_distance_to_grass(self, start_pos, forward_rad, road_segments):
         # get index of road segment that contains car

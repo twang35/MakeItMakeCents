@@ -6,9 +6,13 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-from car_racing import CarRacing
+from stonks_env import StonksEnv
 from td3 import TD3
 from replay_buffer import ReplayBuffer
+
+from charts.shared_charts import load_structured_prices
+from database import *
+
 
 # speed, 7 angles (45, 15, 5, 0), angle of wheel, 6 ahead road segment angles (3, 5, 7, 10, 15, 20)
 STATE_DIM = 15
@@ -53,10 +57,12 @@ def run_td3_bot(argv):
     if len(argv) == 2 and argv[0] == '-name':
         save_file_name = argv[1]
 
-    start = time.time()
-    # rendering mode speed: human: 18.1s, rgb_array: 9.4, state_pixels: 7.8, none: 6.8
-    train_env = CarRacing(render_mode="none", continuous=True)
-    eval_env = CarRacing(render_mode="human", continuous=True)
+    conn = create_connection()
+    cursor = conn.cursor()
+    token = pepefork
+
+    train_env = StonksEnv(load_structured_prices(cursor, token.address))
+    eval_env = StonksEnv(load_structured_prices(cursor, token.address))
 
     policy = TD3(state_dim=STATE_DIM, action_dim=ACTION_DIM,
                  hidden_dim_1=HIDDEN_DIM_1, hidden_dim_2=HIDDEN_DIM_2,
@@ -98,7 +104,7 @@ def run_td3_bot(argv):
             ).clip(-MAX_ACTION, MAX_ACTION)
 
         # Perform action
-        next_state, reward, terminated, truncated = train_env.step(action)
+        next_state, reward, terminated, truncated, _ = train_env.step(action)
         done = float(terminated or truncated)
 
         # Store data in replay buffer

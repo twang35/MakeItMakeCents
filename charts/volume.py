@@ -35,7 +35,7 @@ class Volume:
     total_volume: float
 
 
-def generate_volume(balances_rows, cursor, token_address, granularity=datetime.timedelta(minutes=120)):
+def generate_volume(balances_rows, cursor, token_address, granularity=datetime.timedelta(minutes=60)):
     print(f'running generate_volume')
 
     start = time.time()

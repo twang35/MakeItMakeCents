@@ -98,7 +98,7 @@ def run_td3_bot(argv):
             ).clip(-MAX_ACTION, MAX_ACTION)
 
         # Perform action
-        next_state, reward, terminated, truncated = train_env.step(action)
+        next_state, reward, terminated, truncated, _ = train_env.step(action)
         done = float(terminated or truncated)
 
         # Store data in replay buffer
@@ -165,7 +165,7 @@ def eval_policy(policy, env, track_seed):
 
     while not done:
         action = policy.select_action(np.array(state))
-        state, reward, done, truncated = env.step(action)
+        state, reward, done, truncated, _ = env.step(action)
         total_reward += reward
         done = done or truncated
 

@@ -1,3 +1,4 @@
+import datetime
 import math
 from typing import Optional, Union
 
@@ -6,10 +7,10 @@ import numpy as np
 
 import gymnasium as gym
 from gymnasium import spaces
-from car_dynamics import Car
-from gymnasium.error import DependencyNotInstalled, InvalidAction
-from gymnasium.utils import EzPickle
 from enum import Enum
+
+from charts.shared_charts import *
+from plotly.subplots import make_subplots
 
 
 class StonkAction(Enum):
@@ -28,14 +29,17 @@ class StonksEnv(gym.Env):
 
     def __init__(
             self,
-            token_price,
+            token_prices: TimestampData,
             render_mode: Optional[str] = None,
             verbose: bool = False,
             txn_cost=20,
             starting_cash=10000,
             context_window=24,
+            granularity = datetime.timedelta(minutes=60),
     ):
-        self.token_prices = token_price
+        self.token_prices = self.convert_to_hourly_average(token_prices, granularity)
+        # debug
+        self.check_price_maps(token_prices)
         self.txn_cost = txn_cost
         self.starting_cash = starting_cash
         self.remaining_cash = starting_cash
@@ -43,7 +47,8 @@ class StonksEnv(gym.Env):
 
         self.context_window = context_window
         # always start the env with at least enough data to populate the full context_window
-        self.i = context_window
+        self.cur_time = context_window
+        self.granularity = granularity
 
         self.reward = 0.0
         self.prev_reward = 0.0
@@ -54,8 +59,9 @@ class StonksEnv(gym.Env):
             np.array([+1]).astype(np.float32),
         )  # < -0.5: sell, > 0.5: buy, else hold
 
+        # not sure if this is used for anything
         self.observation_space = spaces.Box(
-            low=0, high=255, shape=(STATE_H, STATE_W, 3), dtype=np.uint8
+            low=0, high=255, shape=(96, 96, 3), dtype=np.uint8
         )
 
         self.render_mode = render_mode
@@ -72,7 +78,7 @@ class StonksEnv(gym.Env):
         self.remaining_cash = self.starting_cash
         self.token_balance = 0
 
-        self.i = self.context_window
+        self.cur_time = self.context_window
 
         super().reset(seed=seed)
         self.reward = 0.0
@@ -93,10 +99,10 @@ class StonksEnv(gym.Env):
         step_reward = self.reward - self.prev_reward
         self.prev_reward = self.reward
 
-        if self.get_total_balance() < self.txn_cost * 2:
+        if self.get_total_balance() < self.txn_cost:
             terminated = True
 
-        if self.i == len(self.token_prices):
+        if self.cur_time == len(self.token_prices):
             # Truncation due to reaching the end of pricing data
             # This should not be treated as a failure
             truncated = True
@@ -114,10 +120,11 @@ class StonksEnv(gym.Env):
         # wheel angle
         state.append(self.car.wheels[0].joint.angle)  # range -0.42 to 0.42 on front wheels
 
-        self.i += 1.0
+        self.cur_time += 1.0
 
-        return state, step_reward, terminated, truncated
+        return state, step_reward, terminated, truncated, {}
 
+    # converts continuous -1 to 1 input to BUY, SELL, HOLD enum
     @staticmethod
     def get_action(action: float):
         if action < -0.5:
@@ -127,7 +134,7 @@ class StonksEnv(gym.Env):
         return StonkAction.HOLD
 
     def get_current_price(self):
-        return self.token_prices[self.i]
+        return self.token_prices[self.cur_time]
 
     def compute_action(self, action: StonkAction):
         if action == StonkAction.BUY:
@@ -142,9 +149,21 @@ class StonksEnv(gym.Env):
             self.token_balance = 0
         # do nothing on HOLD
 
+        self.cur_time += 1
+
         return self.get_total_balance()
 
+    def get_state_price(self):
+        price_state = []
+        price_i = self.cur_time - self.context_window + 1
+        starting_price = self.token_prices[price_i]
+        price_state.append(starting_price)
+        price_i += 1
+        while price_i <= self.cur_time:
+            price_state.append(self.token_prices[price_i] / starting_price)
+            price_i += 1
 
+        return price_state
 
     def render(self):
         if self.render_mode is None:
@@ -225,3 +244,58 @@ class StonksEnv(gym.Env):
             pygame.display.quit()
             self.isopen = False
             pygame.quit()
+
+    @staticmethod
+    def convert_to_hourly_average(token_price: TimestampData, granularity: datetime.timedelta):
+        current_hour = token_price.first_hour
+        before_time_str = str(current_hour + granularity)
+        i = 0
+        hourly_prices = []
+        hourly_timestamps = []
+
+        current_prices = []
+
+        while i < len(token_price.data):
+            # append previous hour data into hourly arrays
+            if token_price.timestamps[i] >= before_time_str:
+                avg_price = 0
+                for num in current_prices:
+                    avg_price += num
+                avg_price /= len(current_prices)
+
+                hourly_prices.append(avg_price)
+                hourly_timestamps.append(current_hour)
+
+                # reset temp vars
+                current_prices = []
+                current_hour += granularity
+                before_time_str = str(current_hour + granularity)
+
+            current_prices.append(token_price.data[i])
+            i += 1
+
+        return TimestampData(hourly_prices, hourly_timestamps)
+
+    def check_price_maps(self, token_prices):
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+        fig.update_layout(
+            title=dict(text=f'price comparison', font=dict(size=25))
+        )
+
+
+        fig.add_trace(
+            go.Scatter(x=self.token_prices.timestamps, y=self.token_prices.data, name='hourly prices'),
+            secondary_y=True,
+        )
+        # fig.update_yaxes(type="log")
+
+        fig.add_trace(
+            go.Scatter(x=token_prices.timestamps, y=token_prices.data, name="all prices", line=dict(color='black')),
+            secondary_y=True,
+        )
+
+        # Set y-axes titles
+        fig.update_yaxes(title_text="price", showspikes=True, secondary_y=True)
+        fig.update_layout(hovermode="x unified")
+        fig.show()
+        print('done with chart')
