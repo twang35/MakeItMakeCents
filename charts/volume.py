@@ -142,7 +142,8 @@ def create_volume_graph(prices, percentiles, timestamps, token, left_offset=0, a
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02,
                         specs=[[{"secondary_y": True}], [{"secondary_y": True}]], )
     fig.update_layout(
-        title=dict(text=f'{token.name} volume' if alt_title is None else alt_title, font=dict(size=25))
+        title=dict(text=f'{token.name} percent buy/sell and volume' if alt_title is None else alt_title,
+                   font=dict(size=25))
     )
 
     price_left_offset = 10
