@@ -61,7 +61,7 @@ def run_td3_bot(argv):
     cursor = conn.cursor()
     token = pepefork
 
-    train_env = StonksEnv(load_structured_prices(cursor, token.address))
+    train_env = StonksEnv(load_structured_prices(cursor, token.address), show_price_map=True)
     eval_env = StonksEnv(load_structured_prices(cursor, token.address))
 
     policy = TD3(state_dim=STATE_DIM, action_dim=ACTION_DIM,

@@ -30,6 +30,7 @@ class StonksEnv(gym.Env):
     def __init__(
             self,
             token_prices: TimestampData,
+            show_price_map = False,
             render_mode: Optional[str] = None,
             verbose: bool = False,
             txn_cost=20,
@@ -38,8 +39,8 @@ class StonksEnv(gym.Env):
             granularity = datetime.timedelta(minutes=60),
     ):
         self.token_prices = self.convert_to_hourly_average(token_prices, granularity)
-        # debug
-        self.check_price_maps(token_prices)
+        if show_price_map:
+            self.show_price_map()
         self.txn_cost = txn_cost
         self.starting_cash = starting_cash
         self.remaining_cash = starting_cash
@@ -47,7 +48,7 @@ class StonksEnv(gym.Env):
 
         self.context_window = context_window
         # always start the env with at least enough data to populate the full context_window
-        self.cur_time = context_window
+        self.i = context_window
         self.granularity = granularity
 
         self.reward = 0.0
@@ -78,7 +79,7 @@ class StonksEnv(gym.Env):
         self.remaining_cash = self.starting_cash
         self.token_balance = 0
 
-        self.cur_time = self.context_window
+        self.i = self.context_window
 
         super().reset(seed=seed)
         self.reward = 0.0
@@ -87,14 +88,20 @@ class StonksEnv(gym.Env):
         zero_step = self.step(0)
         return zero_step[0]
 
+    class StonksState:
+        def __init__(self, state, context_window):
+            self.price_state = state[0:context_window]
+            self.remaining_cash = state[context_window]
+            self.token_balance = state[context_window + 1]
+            self.total_balance = state[context_window + 2]
+
     def step(self, action: float):
         stonk_action = self.get_action(action)
 
-        step_reward = 0
         terminated = False
         truncated = False
 
-        self.reward = self.compute_action(stonk_action)
+        self.reward = self.process_action(stonk_action)
 
         step_reward = self.reward - self.prev_reward
         self.prev_reward = self.reward
@@ -102,27 +109,21 @@ class StonksEnv(gym.Env):
         if self.get_total_balance() < self.txn_cost:
             terminated = True
 
-        if self.cur_time == len(self.token_prices):
+        if self.i == len(self.token_prices.data) - 1:
             # Truncation due to reaching the end of pricing data
             # This should not be treated as a failure
             truncated = True
 
         state = []
-        # distance to grass
-        distance_to_grass = self.dist_scaler.transform(np.array(distance_to_grass).reshape(-1, 1))
-        state.extend(distance_to_grass.reshape(1, -1)[0])
-        # road segment angles ahead
-        angles_ahead = self.angle_scaler.transform(np.array(angles_ahead).reshape(-1, 1))
-        state.extend(angles_ahead.reshape(1, -1)[0])
-        # speed
-        speed = self.speed_scaler.transform(np.array([[self.get_speed(self.car)]]))
-        state.append(speed[0][0])
-        # wheel angle
-        state.append(self.car.wheels[0].joint.angle)  # range -0.42 to 0.42 on front wheels
+        # price state
+        price_state = self.get_price_state()
+        state.extend(price_state)
+        # balances
+        state.append(self.remaining_cash)
+        state.append(self.token_balance)
+        state.append(self.get_total_balance())
 
-        self.cur_time += 1.0
-
-        return state, step_reward, terminated, truncated, {}
+        return state, step_reward, terminated, truncated, {'stonks_state': self.StonksState(state, self.context_window)}
 
     # converts continuous -1 to 1 input to BUY, SELL, HOLD enum
     @staticmethod
@@ -134,33 +135,39 @@ class StonksEnv(gym.Env):
         return StonkAction.HOLD
 
     def get_current_price(self):
-        return self.token_prices[self.cur_time]
+        return self.token_prices.data[self.i]
 
-    def compute_action(self, action: StonkAction):
-        if action == StonkAction.BUY:
+    def process_action(self, action: StonkAction):
+        # get_current_price returns the last average price so trades are done on the last price data seen by the
+        # agent. This should be a good approximation, but it may be more accurate to compute balances based on the
+        # current real price instead of acting on a historical average.
+
+        # buy if cash is available
+        if action == StonkAction.BUY and self.remaining_cash > 0:
             # transfer all cash to token
             self.remaining_cash -= self.txn_cost
             self.token_balance = self.remaining_cash / self.get_current_price()
             self.remaining_cash = 0
-        elif action == StonkAction.SELL:
+        # sell if tokens are available
+        elif action == StonkAction.SELL and self.token_balance > 0:
             # transfer all token to cash
             self.remaining_cash = self.token_balance * self.get_current_price()
             self.remaining_cash -= self.txn_cost
             self.token_balance = 0
         # do nothing on HOLD
 
-        self.cur_time += 1
+        self.i += 1
 
         return self.get_total_balance()
 
-    def get_state_price(self):
+    def get_price_state(self):
         price_state = []
-        price_i = self.cur_time - self.context_window + 1
-        starting_price = self.token_prices[price_i]
+        price_i = self.i - self.context_window + 1
+        starting_price = self.token_prices.data[price_i]
         price_state.append(starting_price)
         price_i += 1
-        while price_i <= self.cur_time:
-            price_state.append(self.token_prices[price_i] / starting_price)
+        while price_i <= self.i:
+            price_state.append(self.token_prices.data[price_i] / starting_price)
             price_i += 1
 
         return price_state
@@ -276,26 +283,14 @@ class StonksEnv(gym.Env):
 
         return TimestampData(hourly_prices, hourly_timestamps)
 
-    def check_price_maps(self, token_prices):
-        fig = make_subplots(specs=[[{"secondary_y": True}]])
-        fig.update_layout(
-            title=dict(text=f'price comparison', font=dict(size=25))
-        )
+    def show_price_map(self):
+        fig = make_subplots()
+        fig.update_layout(title=dict(text=f'hourly price', font=dict(size=25)))
 
-
-        fig.add_trace(
-            go.Scatter(x=self.token_prices.timestamps, y=self.token_prices.data, name='hourly prices'),
-            secondary_y=True,
-        )
-        # fig.update_yaxes(type="log")
-
-        fig.add_trace(
-            go.Scatter(x=token_prices.timestamps, y=token_prices.data, name="all prices", line=dict(color='black')),
-            secondary_y=True,
-        )
+        fig.add_trace(go.Scatter(x=self.token_prices.timestamps, y=self.token_prices.data, name='hourly prices'))
 
         # Set y-axes titles
-        fig.update_yaxes(title_text="price", showspikes=True, secondary_y=True)
+        fig.update_yaxes(title_text="price", showspikes=True)
         fig.update_layout(hovermode="x unified")
         fig.show()
         print('done with chart')
