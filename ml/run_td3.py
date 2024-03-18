@@ -7,36 +7,31 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-from stonks_env import StonksEnv
 from td3 import TD3
 from replay_buffer import ReplayBuffer
 
-from charts.shared_charts import *
+from stonks_env import *
 from database import *
 from plotly.subplots import make_subplots
-
-import dash
-from dash import dcc
-from dash import html
-from threading import Thread
+import plotly.io as pio
 
 
 # 24 latest price, remaining cash, token balance, total balance
 STATE_DIM = 27
-HIDDEN_DIM_1 = 512
-HIDDEN_DIM_2 = 256
+HIDDEN_DIM_1 = 256
+HIDDEN_DIM_2 = 128
 ACTION_DIM = 1      # -1 to 1 representing buy, sell, hold
 MAX_ACTION = 1      # max upper bound for action
-POLICY_NOISE = 0.2  # Noise added to target policy during critic update
-NOISE_CLIP = 0.5    # Range to clip target policy noise
+POLICY_NOISE = 0.1  # Noise added to target policy during critic update
+NOISE_CLIP = 0.3    # Range to clip target policy noise
 BATCH_SIZE = 512    # How many timesteps for each training session for the actor and critic
 # BATCH_SIZE = 1024
 
-EXPLORE_NOISE = 0.1         # Std of Gaussian exploration noise
+EXPLORE_NOISE = 1.0       # Std of Gaussian exploration noise
 RANDOM_POLICY_STEPS = 5000  # Time steps that initial random policy is used
 
 MAX_TRAIN_TIMESTEPS = 5_000_000_000
-EVAL_INTERVAL = 1000
+EVAL_INTERVAL = 5000
 
 TRACK_SEED = 123
 # TRACK_SEED = random.randint(1, 100000)
@@ -60,13 +55,17 @@ if is_ipython:
 
 
 def run_td3_bot(argv):
-    save_file_name = 'default_model'
-    if len(argv) == 2 and argv[0] == '-name':
-        save_file_name = argv[1]
-
     conn = create_connection()
     cursor = conn.cursor()
     token = pepefork
+
+    model_name = 'model'
+    if len(argv) == 2 and argv[0] == '-name':
+        model_name = argv[1]
+    else:
+        model_name = f'{model_name}_{reserve_agent_num(conn)}'
+
+    print(f'save_file_name: {model_name}')
 
     train_env = StonksEnv(load_structured_prices(cursor, token.address), show_price_map=False)
     eval_env = StonksEnv(load_structured_prices(cursor, token.address))
@@ -95,19 +94,11 @@ def run_td3_bot(argv):
     eval_fig.add_trace(go.Scatter(x=eval_env.token_prices.timestamps, y=eval_env.token_prices.data, name='rewards'),
                    secondary_y=False)
 
-    app = dash.Dash()
-    app.layout = html.Div([
-        dcc.Graph(figure=eval_fig)
-    ])
-
-    server_process = multiprocessing.Process(target=run_dash_app, args=[app])
-    server_process.start()
-
-    eval_reward = eval_policy(policy, eval_env, eval_fig, app)
+    eval_reward = eval_policy(policy, eval_env, eval_fig)
     eval_rewards.append(eval_reward)
     if EVAL_ONLY:
         print(f'total reward: {eval_reward}')
-        eval_policy(policy, eval_env, eval_fig, app)  # ANOTHER!!
+        eval_policy(policy, eval_env, eval_fig)  # ANOTHER!!
         return
 
     start = time.time()
@@ -160,24 +151,22 @@ def run_td3_bot(argv):
         if t % EVAL_INTERVAL == 0:
             print(f'steps/sec: {EVAL_INTERVAL / (time.time() - start)}')
             # append to both train and eval to keep them at the index on the chart
-            eval_reward = eval_policy(policy, eval_env, eval_fig, app)
+            eval_reward = eval_policy(policy, eval_env, eval_fig)
             train_rewards.append(episode_reward)
             eval_rewards.append(eval_reward)
             print(f'eval reward: {eval_reward}')
 
             if eval_reward > max_eval_reward:
                 max_eval_reward = eval_reward
-                if max_eval_reward > 900:
-                    policy.save(f"./models/{save_file_name}")
-                    print(f"saved model {save_file_name}")
+                if max_eval_reward > 20_000:
+                    policy.save(f"./models/{model_name}")
+                    print(f"saved model {model_name}")
 
             plot_durations(test_rewards=eval_rewards, train_rewards=train_rewards,
                            timestep=t, max_training_reward=max_train_reward)
 
             start = time.time()
 
-    plot_durations(test_rewards=eval_rewards, train_rewards=train_rewards, show_result=True,
-                   timestep=MAX_TRAIN_TIMESTEPS+1, max_training_reward=max_train_reward)
     plt.ioff()
     plt.show()
     train_env.close()
@@ -185,7 +174,7 @@ def run_td3_bot(argv):
     print(f'total time: {time.time() - start}')
 
 
-def eval_policy(policy, env, fig, app):
+def eval_policy(policy, env, fig):
     done = False
     state = env.reset()
     total_reward = 0
@@ -200,16 +189,12 @@ def eval_policy(policy, env, fig, app):
         timestamps.append(info['stonks_state'].timestamp)
         done = done or truncated
 
-    show_eval_chart(fig, rewards, timestamps, app)
+    show_eval_chart(fig, rewards, timestamps)
 
     return total_reward
 
 
-def run_dash_app(app):
-    app.run_server(debug=False)
-
-
-def show_eval_chart(fig, rewards, timestamps, app):
+def show_eval_chart(fig, rewards, timestamps):
     fig.update_layout(title=dict(text=f'Training rewards', font=dict(size=25)))
 
     # replace rewards data
@@ -222,11 +207,8 @@ def show_eval_chart(fig, rewards, timestamps, app):
     # Set y-axes titles
     fig.update_yaxes(title_text="price", showspikes=True)
     fig.update_layout(hovermode="x unified")
-    # fig.show()
 
-    app.layout = html.Div([
-        dcc.Graph(figure=fig)
-    ])
+    # fig.show()
 
 
 def plot_durations(test_rewards, train_rewards, timestep, max_training_reward,
@@ -238,7 +220,8 @@ def plot_durations(test_rewards, train_rewards, timestep, max_training_reward,
         plt.clf()
         plt.title(f'Training... dim: {HIDDEN_DIM_1}x{HIDDEN_DIM_2}, '
                   f'batch: {BATCH_SIZE}, '
-                  f'eval interval: {EVAL_INTERVAL}')
+                  f'eval interval: {EVAL_INTERVAL}, '
+                  f'explore_noise: {EXPLORE_NOISE}')
 
     next_eval = abs((timestep % EVAL_INTERVAL) - EVAL_INTERVAL)
     plt.xlabel(f'Episode ({len(train_rewards)}), '

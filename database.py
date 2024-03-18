@@ -160,6 +160,21 @@ def create_known_addresses_table():
     create_table(sql_create_table)
 
 
+class AgentsColumns:
+    table_name = 'known_addresses'
+    agent = 0
+    column_names = ['agent']
+
+
+def create_agents_table():
+    sql_create_table = """ CREATE TABLE IF NOT EXISTS agents (
+                                        agent INTEGER NOT NULL,
+                                        PRIMARY KEY (agent)
+                                        ); """
+
+    create_table(sql_create_table)
+
+
 def create_table(create_sql):
     conn = create_connection()
     c = conn.cursor()
@@ -303,6 +318,23 @@ def get_latest_price_timestamp(conn, token_address):
     cursor.execute(query)
     result = cursor.fetchall()
     return datetime.datetime.fromisoformat(result[0][0])
+
+
+def reserve_agent_num(conn):
+    cursor = conn.cursor()
+    query = f"""
+        SELECT MAX(agent) AS latest_agent
+        FROM agents;
+        """
+    cursor.execute(query)
+    result = cursor.fetchall()
+    next_agent = int(result[0][0] if result[0][0] is not None else -1) + 1
+
+    sql = '''INSERT OR REPLACE INTO agents(agent) VALUES(?);'''
+    cursor.execute(sql, [next_agent])
+    conn.commit()
+
+    return next_agent
 
 
 def get_latest_wallet_balances(conn, token_address):

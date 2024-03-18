@@ -81,9 +81,9 @@ class StonksEnv(gym.Env):
 
         self.i = self.context_window
 
-        super().reset(seed=seed)
         self.reward = 0.0
         self.prev_reward = 0.0
+        super().reset()
 
         zero_step = self.step(0)
         return zero_step[0]
