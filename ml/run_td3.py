@@ -14,11 +14,11 @@ from charts.shared_charts import load_structured_prices
 from database import *
 
 
-# speed, 7 angles (45, 15, 5, 0), angle of wheel, 6 ahead road segment angles (3, 5, 7, 10, 15, 20)
-STATE_DIM = 15
+# 24 latest price, remaining cash, token balance, total balance
+STATE_DIM = 27
 HIDDEN_DIM_1 = 512
 HIDDEN_DIM_2 = 256
-ACTION_DIM = 3      # no action, left, right, accel, brake
+ACTION_DIM = 1      # -1 to 1 representing buy, sell, hold
 MAX_ACTION = 1      # max upper bound for action
 POLICY_NOISE = 0.2  # Noise added to target policy during critic update
 NOISE_CLIP = 0.5    # Range to clip target policy noise
@@ -61,7 +61,7 @@ def run_td3_bot(argv):
     cursor = conn.cursor()
     token = pepefork
 
-    train_env = StonksEnv(load_structured_prices(cursor, token.address), show_price_map=True)
+    train_env = StonksEnv(load_structured_prices(cursor, token.address), show_price_map=False)
     eval_env = StonksEnv(load_structured_prices(cursor, token.address))
 
     policy = TD3(state_dim=STATE_DIM, action_dim=ACTION_DIM,
@@ -104,7 +104,7 @@ def run_td3_bot(argv):
             ).clip(-MAX_ACTION, MAX_ACTION)
 
         # Perform action
-        next_state, reward, terminated, truncated, _ = train_env.step(action)
+        next_state, reward, terminated, truncated, info = train_env.step(action)
         done = float(terminated or truncated)
 
         # Store data in replay buffer
@@ -138,10 +138,11 @@ def run_td3_bot(argv):
 
         if t % EVAL_INTERVAL == 0:
             print(f'steps/sec: {EVAL_INTERVAL / (time.time() - start)}')
-            # append to both train and eval to keep them with the same number
+            # append to both train and eval to keep them at the index on the chart
             eval_reward = eval_policy(policy, eval_env, TRACK_SEED)
             train_rewards.append(episode_reward)
             eval_rewards.append(eval_reward)
+            print(f'eval reward: {eval_reward}')
 
             if eval_reward > max_eval_reward:
                 max_eval_reward = eval_reward
@@ -170,7 +171,7 @@ def eval_policy(policy, env, track_seed):
 
     while not done:
         action = policy.select_action(np.array(state))
-        state, reward, done, truncated = env.step(action)
+        state, reward, done, truncated, info = env.step(action)
         total_reward += reward
         done = done or truncated
 

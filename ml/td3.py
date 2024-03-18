@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# device = torch.device("mps")
 
 # Implementation of Twin Delayed Deep Deterministic Policy Gradients (TD3)
 # Paper: https://arxiv.org/abs/1802.09477
@@ -101,7 +102,7 @@ class TD3(object):
         self.total_it = 0
 
     def select_action(self, state):
-        state = torch.FloatTensor(state.reshape(1, -1))
+        state = torch.FloatTensor(state.reshape(1, -1)).to(self.device)
         return self.actor(state).cpu().data.numpy().flatten()
 
     def train(self, replay_buffer, batch_size=256):
