@@ -1,3 +1,4 @@
+import multiprocessing
 import random
 import sys
 import time
@@ -10,8 +11,14 @@ from stonks_env import StonksEnv
 from td3 import TD3
 from replay_buffer import ReplayBuffer
 
-from charts.shared_charts import load_structured_prices
+from charts.shared_charts import *
 from database import *
+from plotly.subplots import make_subplots
+
+import dash
+from dash import dcc
+from dash import html
+from threading import Thread
 
 
 # 24 latest price, remaining cash, token balance, total balance
@@ -29,7 +36,7 @@ EXPLORE_NOISE = 0.1         # Std of Gaussian exploration noise
 RANDOM_POLICY_STEPS = 5000  # Time steps that initial random policy is used
 
 MAX_TRAIN_TIMESTEPS = 5_000_000_000
-EVAL_INTERVAL = 5000
+EVAL_INTERVAL = 1000
 
 TRACK_SEED = 123
 # TRACK_SEED = random.randint(1, 100000)
@@ -82,11 +89,25 @@ def run_td3_bot(argv):
 
     replay_buffer = ReplayBuffer(STATE_DIM, ACTION_DIM)
 
-    eval_reward = eval_policy(policy, eval_env, TRACK_SEED)
+    eval_fig = make_subplots(specs=[[{"secondary_y": True}]])
+    eval_fig.add_trace(go.Scatter(x=eval_env.token_prices.timestamps, y=eval_env.token_prices.data, name='hourly prices'),
+                   secondary_y=True)
+    eval_fig.add_trace(go.Scatter(x=eval_env.token_prices.timestamps, y=eval_env.token_prices.data, name='rewards'),
+                   secondary_y=False)
+
+    app = dash.Dash()
+    app.layout = html.Div([
+        dcc.Graph(figure=eval_fig)
+    ])
+
+    server_process = multiprocessing.Process(target=run_dash_app, args=[app])
+    server_process.start()
+
+    eval_reward = eval_policy(policy, eval_env, eval_fig, app)
     eval_rewards.append(eval_reward)
     if EVAL_ONLY:
         print(f'total reward: {eval_reward}')
-        eval_policy(policy, eval_env, TRACK_SEED)  # ANOTHER!!
+        eval_policy(policy, eval_env, eval_fig, app)  # ANOTHER!!
         return
 
     start = time.time()
@@ -139,7 +160,7 @@ def run_td3_bot(argv):
         if t % EVAL_INTERVAL == 0:
             print(f'steps/sec: {EVAL_INTERVAL / (time.time() - start)}')
             # append to both train and eval to keep them at the index on the chart
-            eval_reward = eval_policy(policy, eval_env, TRACK_SEED)
+            eval_reward = eval_policy(policy, eval_env, eval_fig, app)
             train_rewards.append(episode_reward)
             eval_rewards.append(eval_reward)
             print(f'eval reward: {eval_reward}')
@@ -164,18 +185,48 @@ def run_td3_bot(argv):
     print(f'total time: {time.time() - start}')
 
 
-def eval_policy(policy, env, track_seed):
+def eval_policy(policy, env, fig, app):
     done = False
-    state = env.reset(seed=track_seed)
+    state = env.reset()
     total_reward = 0
+    rewards = []
+    timestamps = []
 
     while not done:
         action = policy.select_action(np.array(state))
         state, reward, done, truncated, info = env.step(action)
         total_reward += reward
+        rewards.append(total_reward)
+        timestamps.append(info['stonks_state'].timestamp)
         done = done or truncated
 
+    show_eval_chart(fig, rewards, timestamps, app)
+
     return total_reward
+
+
+def run_dash_app(app):
+    app.run_server(debug=False)
+
+
+def show_eval_chart(fig, rewards, timestamps, app):
+    fig.update_layout(title=dict(text=f'Training rewards', font=dict(size=25)))
+
+    # replace rewards data
+    reward_trace = fig.data[1]
+    reward_trace.x = timestamps
+    reward_trace.y = rewards
+
+    # add a second chart for buy/sell/hold behavior with actual action num and lines at 0.5 and -0.5
+
+    # Set y-axes titles
+    fig.update_yaxes(title_text="price", showspikes=True)
+    fig.update_layout(hovermode="x unified")
+    # fig.show()
+
+    app.layout = html.Div([
+        dcc.Graph(figure=fig)
+    ])
 
 
 def plot_durations(test_rewards, train_rewards, timestep, max_training_reward,

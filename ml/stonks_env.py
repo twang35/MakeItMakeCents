@@ -89,11 +89,12 @@ class StonksEnv(gym.Env):
         return zero_step[0]
 
     class StonksState:
-        def __init__(self, state, context_window):
+        def __init__(self, state, context_window, timestamp):
             self.price_state = state[0:context_window]
             self.remaining_cash = state[context_window]
             self.token_balance = state[context_window + 1]
             self.total_balance = state[context_window + 2]
+            self.timestamp = timestamp
 
     def step(self, action: float):
         stonk_action = self.get_action(action)
@@ -123,7 +124,8 @@ class StonksEnv(gym.Env):
         state.append(self.token_balance)
         state.append(self.get_total_balance())
 
-        return state, step_reward, terminated, truncated, {'stonks_state': self.StonksState(state, self.context_window)}
+        return (state, step_reward, terminated, truncated,
+                {'stonks_state': self.StonksState(state, self.context_window, self.token_prices.timestamps[self.i])})
 
     # converts continuous -1 to 1 input to BUY, SELL, HOLD enum
     @staticmethod
