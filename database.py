@@ -161,15 +161,32 @@ def create_known_addresses_table():
 
 
 class AgentsColumns:
-    table_name = 'known_addresses'
+    table_name = 'agents'
     agent = 0
-    column_names = ['agent']
 
 
 def create_agents_table():
     sql_create_table = """ CREATE TABLE IF NOT EXISTS agents (
                                         agent INTEGER NOT NULL,
                                         PRIMARY KEY (agent)
+                                        ); """
+
+    create_table(sql_create_table)
+
+
+class TestDataColumns:
+    table_name = 'test_data'
+    price = 0
+    type = 1
+    timestamp = 2
+
+
+def create_test_data_table():
+    sql_create_table = """ CREATE TABLE IF NOT EXISTS test_data (
+                                        price REAL NOT NULL,
+                                        type TEXT,
+                                        timestamp TEXT,
+                                        PRIMARY KEY (type, timestamp)
                                         ); """
 
     create_table(sql_create_table)
@@ -259,6 +276,13 @@ def insert_known_addresses(conn, row):
      ON CONFLICT(wallet_address) DO UPDATE SET {update_set_string};'''
 
     cur.execute(sql, non_null_row)
+    conn.commit()
+
+
+def insert_test_data(conn, row):
+    sql = '''INSERT OR REPLACE INTO test_data(price, type, timestamp) VALUES(?,?,?);'''
+    cur = conn.cursor()
+    cur.execute(sql, row)
     conn.commit()
 
 
