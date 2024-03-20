@@ -6,7 +6,6 @@ from replay_buffer import ReplayBuffer
 
 from stonks_env import *
 from database import *
-from plotly.subplots import make_subplots
 
 
 class TD3Runner:
@@ -69,21 +68,11 @@ class TD3Runner:
 
         replay_buffer = ReplayBuffer(self.state_dim, self.action_dim)
 
-        eval_fig = make_subplots(specs=[[{"secondary_y": True}]])
-        eval_fig.add_trace(go.Scatter(x=self.eval_env.token_prices.timestamps,
-                                      y=self.eval_env.token_prices.data,
-                                      name='hourly prices'),
-                           secondary_y=True)
-        eval_fig.add_trace(go.Scatter(x=self.eval_env.token_prices.timestamps,
-                                      y=self.eval_env.token_prices.data,
-                                      name='rewards'),
-                           secondary_y=False)
-
-        eval_reward = self.eval_policy(eval_fig)
+        eval_reward = self.eval_policy()
         eval_rewards.append(eval_reward)
         if self.eval_only:
             print(f'total reward: {eval_reward}')
-            self.eval_policy(eval_fig, show_plotly_chart=True)  # ANOTHER!!
+            self.eval_policy(show_chart=True)  # ANOTHER!!
             return
 
         start = time.time()
@@ -130,13 +119,13 @@ class TD3Runner:
                 episode_reward = 0
                 episode_timesteps = 0
                 episode_num += 1
-                self.plot_durations(test_rewards=eval_rewards, train_rewards=train_rewards,
-                                    timestep=t, max_training_reward=max_train_reward)
+                self.update_training_plot(test_rewards=eval_rewards, train_rewards=train_rewards,
+                                          timestep=t, max_training_reward=max_train_reward)
 
             if t % self.eval_interval == 0:
                 print(f'steps/sec: {self.eval_interval / (time.time() - start)}')
                 # append to both train and eval to keep them at the index on the chart
-                eval_reward = self.eval_policy(eval_fig)
+                eval_reward = self.eval_policy(show_chart=True)
                 train_rewards.append(episode_reward)
                 eval_rewards.append(eval_reward)
                 print(f'eval reward: {eval_reward}')
@@ -147,8 +136,8 @@ class TD3Runner:
                         self.policy.save(f"./models/{self.model_name}")
                         print(f"saved model {self.model_name}")
 
-                self.plot_durations(test_rewards=eval_rewards, train_rewards=train_rewards,
-                                    timestep=t, max_training_reward=max_train_reward)
+                self.update_training_plot(test_rewards=eval_rewards, train_rewards=train_rewards,
+                                          timestep=t, max_training_reward=max_train_reward)
 
                 start = time.time()
 
@@ -159,10 +148,11 @@ class TD3Runner:
         self.eval_env.close()
         print(f'total time: {time.time() - start}')
 
-    def eval_policy(self, fig, show_plotly_chart=False):
+    def eval_policy(self, show_chart=False):
         done = False
         state = self.eval_env.reset()
         total_reward = 0
+        actions = []
         rewards = []
         timestamps = []
 
@@ -170,34 +160,39 @@ class TD3Runner:
             action = self.policy.select_action(np.array(state))
             state, reward, done, truncated, info = self.eval_env.step(action)
             total_reward += reward
+            actions.append(action)
             rewards.append(total_reward)
             timestamps.append(info['stonks_state'].timestamp)
             done = done or truncated
 
-        if show_plotly_chart:
-            self.show_plotly_eval_chart(fig, rewards, timestamps)
+        if show_chart:
+            self.show_eval_chart(actions, rewards, timestamps)
 
         return total_reward
 
-    @staticmethod
-    def show_plotly_eval_chart(fig, rewards, timestamps):
-        fig.update_layout(title=dict(text=f'Training rewards', font=dict(size=25)))
+    def show_eval_chart(self, actions, rewards, timestamps):
+        fig = plt.figure(2, figsize=(9, 6))
+        plt.clf()
+        plt.title(f'{self.model_name} Eval')
 
-        # replace rewards data
-        reward_trace = fig.data[1]
-        reward_trace.x = timestamps
-        reward_trace.y = rewards
+        ax1 = fig.get_axes()[0]
+        ax2 = ax1.twinx()
+
+        ax1.plot(timestamps, rewards, color='b', label='reward')
+        ax1.set_ylabel('Eval Rewards')
+        ax2.plot(timestamps, actions, color='r', label='action')
+        ax2.set_ylabel('Eval Actions')
+
+        ax1.set_xlabel('timestamp')
 
         # add a second chart for buy/sell/hold behavior with actual action num and lines at 0.5 and -0.5
 
-        # Set y-axes titles
-        fig.update_yaxes(title_text="price", showspikes=True)
-        fig.update_layout(hovermode="x unified")
+        plt.legend(loc='upper left')
 
-        fig.show()
+        fig.canvas.start_event_loop(0.001)  # this updates the plot and doesn't steal window focus
 
-    def plot_durations(self, test_rewards, train_rewards, timestep, max_training_reward,
-                       show_result=False):
+    def update_training_plot(self, test_rewards, train_rewards, timestep, max_training_reward,
+                             show_result=False):
         fig = plt.figure(1, figsize=(9, 6))
         if show_result:
             plt.title('Result')
