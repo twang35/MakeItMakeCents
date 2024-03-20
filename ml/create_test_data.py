@@ -6,7 +6,7 @@ class TestDataTypes:
     # centered around 100 with 10 amplitude and 0 slope
     easy_horizontal = 'easy_horizontal'
 
-π
+
 def create_test_data():
     # create_test_data_table()
 
