@@ -1,4 +1,3 @@
-import random
 import sys
 import time
 
@@ -7,8 +6,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 from car_racing import CarRacing
-from td3 import TD3
-from replay_buffer import ReplayBuffer
+from ml.td3 import TD3
+from ml.replay_buffer import ReplayBuffer
 
 # speed, 7 angles (45, 15, 5, 0), angle of wheel, 6 ahead road segment angles (3, 5, 7, 10, 15, 20)
 STATE_DIM = 15
