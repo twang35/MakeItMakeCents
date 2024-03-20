@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 
+from ml.create_test_data import TestDataTypes
 from td3 import TD3
 from replay_buffer import ReplayBuffer
 
@@ -42,8 +43,9 @@ class TD3Runner:
 
         print(f'save_file_name: {self.model_name}')
 
-        self.train_env = StonksEnv(load_structured_prices(cursor, token.address), show_price_map=False)
-        self.eval_env = StonksEnv(load_structured_prices(cursor, token.address))
+        self.train_env = StonksEnv(load_structured_test_data_prices(cursor, TestDataTypes.easy_horizontal),
+                                   show_price_map=False)
+        self.eval_env = StonksEnv(load_structured_test_data_prices(cursor, TestDataTypes.easy_horizontal))
 
         self.policy = TD3(state_dim=self.state_dim, action_dim=self.action_dim,
                           hidden_dim_1=self.hidden_dim_1, hidden_dim_2=self.hidden_dim_2,

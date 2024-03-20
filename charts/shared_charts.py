@@ -49,6 +49,23 @@ def load_structured_prices(cursor, token_address):
     return TimestampData([row[0] for row in prices], [row[1] for row in prices])
 
 
+def load_structured_test_data_prices(cursor, data_type):
+    query = f"""
+            SELECT 
+                *
+            FROM 
+                test_data
+            WHERE
+                type='{data_type}'
+            ORDER BY
+                timestamp;
+            """
+    cursor.execute(query)
+    prices = cursor.fetchall()
+    return TimestampData([row[TestDataColumns.price] for row in prices],
+                         [row[TestDataColumns.timestamp] for row in prices])
+
+
 def get_price_map(cursor, token_address):
     query = f"""
             SELECT * FROM prices
