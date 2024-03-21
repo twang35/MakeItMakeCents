@@ -11,18 +11,21 @@ from database import *
 class TD3Runner:
     def __init__(self, eval_only=False, load_file=''):
         # 24 latest price, remaining cash, token balance, total balance
-        self.state_dim = 27
-        self.hidden_dim_1 = 256
-        self.hidden_dim_2 = 128
+        # self.state_dim = 27
+        self.state_dim = 7
+        self.hidden_dim_1 = 64
+        self.hidden_dim_2 = 32
         self.action_dim = 1  # -1 to 1 representing buy, sell, hold
         self.max_action = 1  # max upper bound for action
-        self.policy_noise = 0.1  # Noise added to target policy during critic update
-        self.noise_clip = 0.3  # Range to clip target policy noise
+        self.policy_noise = 0.05  # Noise added to target policy during critic update
+        self.noise_clip = 0.2  # Range to clip target policy noise
         self.batch_size = 256  # How many timesteps for each training session for the actor and critic
         # BATCH_SIZE = 1024
 
-        self.explore_noise = 1  # Std of Gaussian exploration noise
+        self.explore_noise = 0.1  # Std of Gaussian exploration noise
         self.random_policy_steps = 5000  # Time steps that initial random policy is used
+
+        self.learning_rate = 3e-7
 
         self.max_train_timesteps = 5_000_000_000
         self.eval_interval = 5000
@@ -50,14 +53,17 @@ class TD3Runner:
 
         self.policy = TD3(state_dim=self.state_dim, action_dim=self.action_dim,
                           hidden_dim_1=self.hidden_dim_1, hidden_dim_2=self.hidden_dim_2,
-                          max_action=self.max_action, policy_noise=self.policy_noise, noise_clip=self.noise_clip)
+                          max_action=self.max_action, policy_noise=self.policy_noise, noise_clip=self.noise_clip,
+                          learning_rate=self.learning_rate)
         if self.load_file != '':
             self.policy.load(f"./{self.load_file}")
 
         plt.ion()
 
     def run(self):
-        print(f'start training with explore_noise: {self.explore_noise}')
+        print(f'start training with \n'
+              f'explore_noise: {self.explore_noise} \n'
+              f'learning_rate: {self.learning_rate}')
 
         state = self.train_env.reset()
         train_rewards = []
@@ -202,8 +208,9 @@ class TD3Runner:
             plt.clf()
             plt.title(f'Training {self.model_name}... dim: {self.hidden_dim_1}x{self.hidden_dim_2}, '
                       f'batch: {self.batch_size}, '
-                      f'eval interval: {self.eval_interval}, '
-                      f'explore_noise: {self.explore_noise}')
+                      f'eval interval: {self.eval_interval}, \n'
+                      f'explore_noise: {self.explore_noise} '
+                      f'learning_rate: {self.learning_rate}')
 
         next_eval = abs((timestep % self.eval_interval) - self.eval_interval)
         plt.xlabel(f'Episode ({len(train_rewards)}), '

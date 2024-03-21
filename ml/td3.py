@@ -35,8 +35,8 @@ class Critic(nn.Module):
         super(Critic, self).__init__()
 
         # Q1 architecture
-        self.l1 = nn.Linear(state_dim + action_dim, 256)
-        self.l2 = nn.Linear(256, hidden_dim_2)
+        self.l1 = nn.Linear(state_dim + action_dim, hidden_dim_1)
+        self.l2 = nn.Linear(hidden_dim_1, hidden_dim_2)
         self.l3 = nn.Linear(hidden_dim_2, 1)
 
         # Q2 architecture
@@ -72,13 +72,13 @@ class TD3(object):
             action_dim,
             hidden_dim_1,
             hidden_dim_2,
-            max_action,         # Max upper bound for action
-            discount=0.99,      # Discount factor for future rewards
-            tau=0.005,          # Target network update rate
-            policy_noise=0.2,   # Noise added to target policy during critic update
-            noise_clip=0.5,     # Range to clip target policy noise
-            policy_freq=2,      # Frequency of delayed policy updates
-            learning_rate=3e-4, # Learning rate for the actor and critic nets
+            max_action,          # Max upper bound for action
+            discount=0.99,       # Discount factor for future rewards
+            tau=0.005,           # Target network update rate
+            policy_noise=0.2,    # Noise added to target policy during critic update
+            noise_clip=0.5,      # Range to clip target policy noise
+            policy_freq=2,       # Frequency of delayed policy updates
+            learning_rate=3e-4,  # Learning rate for the actor and critic nets
             device=torch.device("cpu")
     ):
 

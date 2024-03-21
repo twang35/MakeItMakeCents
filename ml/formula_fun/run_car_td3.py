@@ -11,8 +11,8 @@ from ml.replay_buffer import ReplayBuffer
 
 # speed, 7 angles (45, 15, 5, 0), angle of wheel, 6 ahead road segment angles (3, 5, 7, 10, 15, 20)
 STATE_DIM = 15
-HIDDEN_DIM_1 = 512
-HIDDEN_DIM_2 = 256
+HIDDEN_DIM_1 = 64
+HIDDEN_DIM_2 = 32
 ACTION_DIM = 3      # no action, left, right, accel, brake
 MAX_ACTION = 1      # max upper bound for action
 POLICY_NOISE = 0.2  # Noise added to target policy during critic update

@@ -35,7 +35,7 @@ class StonksEnv(gym.Env):
             verbose: bool = False,
             txn_cost=20,
             starting_cash=10000,
-            context_window=24,
+            context_window=4,
             granularity = datetime.timedelta(minutes=60),
     ):
         self.token_prices = self.convert_to_hourly_average(token_prices, granularity)
@@ -58,12 +58,19 @@ class StonksEnv(gym.Env):
         self.action_space = spaces.Box(
             np.array([-1]).astype(np.float32),
             np.array([+1]).astype(np.float32),
-        )  # < -0.5: sell, > 0.5: buy, else hold
+        )  # -1 is all cash, 1 is all token
 
         # not sure if this is used for anything
         self.observation_space = spaces.Box(
-            low=0, high=255, shape=(96, 96, 3), dtype=np.uint8
+            low=-100_000, high=100_000, shape=(27, 1), dtype=np.uint8
         )
+
+        self.price_scaler = preprocessing.MinMaxScaler()
+        self.price_scaler.fit(np.array([80, 120]).reshape(-1, 1))
+        self.cash_scaler = preprocessing.MinMaxScaler()
+        self.cash_scaler.fit(np.array([0, 100_000]).reshape(-1, 1))
+        self.token_scaler = preprocessing.MinMaxScaler()
+        self.token_scaler.fit(np.array([0, 1000]).reshape(-1, 1))
 
         self.render_mode = render_mode
 
@@ -85,7 +92,7 @@ class StonksEnv(gym.Env):
         self.reward = 0.0
         self.prev_reward = 0.0
 
-        zero_step = self.step(-1)  # start with sell action, which should do nothing as token balance is 0
+        zero_step = self.step([-1])  # start with 0 tokens
         return zero_step[0]
 
     class StonksState:
@@ -96,13 +103,11 @@ class StonksEnv(gym.Env):
             self.total_balance = state[context_window + 2]
             self.timestamp = timestamp
 
-    def step(self, action: float):
-        stonk_action = self.get_action(action)
-
+    def step(self, action):
         terminated = False
         truncated = False
 
-        self.reward = self.process_action(stonk_action)
+        self.reward = self.process_action(action)
 
         step_reward = self.reward - self.prev_reward
         self.prev_reward = self.reward
@@ -117,13 +122,13 @@ class StonksEnv(gym.Env):
 
         state = []
         # price state
-        price_state = self.get_price_state()
-        state.extend(price_state)
+        price_state = self.get_unaltered_price_state()
+        price_state = self.price_scaler.transform(np.array(price_state).reshape(-1, 1))
+        state.extend(price_state.reshape(1, -1)[0])
         # balances
-        state.append(1 if self.remaining_cash > 0 else 0)
-        state.append(1 if self.token_balance > 0 else 0)
-        # state.append(self.get_total_balance())
-        state.append(0)
+        state.append(self.cash_scaler.transform(np.array([[self.remaining_cash]]))[0][0])
+        state.append(self.token_scaler.transform(np.array([[self.token_balance]]))[0][0])
+        state.append(self.cash_scaler.transform(np.array([[self.get_total_balance()]]))[0][0])
 
         return (state, step_reward, terminated, truncated,
                 {'stonks_state': self.StonksState(state, self.context_window, self.token_prices.timestamps[self.i])})
@@ -139,7 +144,7 @@ class StonksEnv(gym.Env):
     def get_current_price(self):
         return self.token_prices.data[self.i]
 
-    def process_action(self, action: StonkAction):
+    def process_stonk_action(self, action: StonkAction):
         # get_current_price returns the last average price so trades are done on the last price data seen by the
         # agent. This should be a good approximation, but it may be more accurate to compute balances based on the
         # current real price instead of acting on a historical average.
@@ -162,6 +167,25 @@ class StonksEnv(gym.Env):
 
         return self.get_total_balance()
 
+    def process_action(self, token_ratio):
+        # get_current_price returns the last average price so trades are done on the last price data seen by the
+        # agent. This should be a good approximation, but it may be more accurate to compute balances based on the
+        # current real price instead of acting on a historical average.
+
+        # rebalance cash/token holdings based on ratio from action
+        token_ratio = (token_ratio[0] + 1) / 2  # token_ratio starts from -1 to 1 because the Actor is designed this way
+        total_balance = self.get_total_balance()
+        cash_target = total_balance * (1 - token_ratio)
+
+        token_change = (self.remaining_cash - cash_target) / self.get_current_price()
+
+        self.token_balance += token_change
+        self.remaining_cash -= token_change * self.get_current_price()
+
+        self.i += 1
+
+        return self.get_total_balance()
+
     def get_price_state(self):
         price_state = []
         price_i = self.i - self.context_window + 1
@@ -173,6 +197,9 @@ class StonksEnv(gym.Env):
             price_i += 1
 
         return price_state
+
+    def get_unaltered_price_state(self):
+        return self.token_prices.data[self.i - self.context_window + 1: self.i + 1]
 
     def render(self):
         # nothing to render
