@@ -18,10 +18,10 @@ class TD3Runner:
         self.max_action = 1  # max upper bound for action
         self.policy_noise = 0.1  # Noise added to target policy during critic update
         self.noise_clip = 0.3  # Range to clip target policy noise
-        self.batch_size = 512  # How many timesteps for each training session for the actor and critic
+        self.batch_size = 256  # How many timesteps for each training session for the actor and critic
         # BATCH_SIZE = 1024
 
-        self.explore_noise = 1.0  # Std of Gaussian exploration noise
+        self.explore_noise = 1  # Std of Gaussian exploration noise
         self.random_policy_steps = 5000  # Time steps that initial random policy is used
 
         self.max_train_timesteps = 5_000_000_000
@@ -32,6 +32,8 @@ class TD3Runner:
         # self.eval_only = True
         # self.load_file = 'models/saved/term3_overfit'
         # self.load_file = 'models/default_model'
+
+        self.figure_size = (8, 5)
 
         conn = create_connection()
         cursor = conn.cursor()
@@ -60,8 +62,8 @@ class TD3Runner:
         state = self.train_env.reset()
         train_rewards = []
         eval_rewards = []
-        max_eval_reward = 0
-        max_train_reward = 0
+        max_eval_reward = -10_000
+        max_train_reward = -10_000
         episode_reward = 0
         episode_timesteps = 0
         episode_num = 0
@@ -171,7 +173,7 @@ class TD3Runner:
         return total_reward
 
     def show_eval_chart(self, actions, rewards, timestamps):
-        fig = plt.figure(2, figsize=(9, 6))
+        fig = plt.figure(2, figsize=self.figure_size)
         plt.clf()
         plt.title(f'{self.model_name} Eval')
 
@@ -179,7 +181,7 @@ class TD3Runner:
         ax2 = ax1.twinx()
 
         ax1.plot(timestamps, rewards, color='b', label='reward')
-        ax1.set_ylabel('Eval Rewards')
+        ax1.set_ylabel(f'Eval Rewards {round(rewards[-1], 2)}')
         ax2.plot(timestamps, actions, color='r', label='action')
         ax2.set_ylabel('Eval Actions')
 
@@ -193,7 +195,7 @@ class TD3Runner:
 
     def update_training_plot(self, test_rewards, train_rewards, timestep, max_training_reward,
                              show_result=False):
-        fig = plt.figure(1, figsize=(9, 6))
+        fig = plt.figure(1, figsize=self.figure_size)
         if show_result:
             plt.title('Result')
         else:

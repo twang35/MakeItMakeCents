@@ -76,6 +76,7 @@ class StonksEnv(gym.Env):
             seed: Optional[int] = None,
             options: Optional[dict] = None,
     ):
+        super().reset()
         self.remaining_cash = self.starting_cash
         self.token_balance = 0
 
@@ -83,9 +84,8 @@ class StonksEnv(gym.Env):
 
         self.reward = 0.0
         self.prev_reward = 0.0
-        super().reset()
 
-        zero_step = self.step(0)
+        zero_step = self.step(-1)  # start with sell action, which should do nothing as token balance is 0
         return zero_step[0]
 
     class StonksState:
@@ -120,9 +120,10 @@ class StonksEnv(gym.Env):
         price_state = self.get_price_state()
         state.extend(price_state)
         # balances
-        state.append(self.remaining_cash)
-        state.append(self.token_balance)
-        state.append(self.get_total_balance())
+        state.append(1 if self.remaining_cash > 0 else 0)
+        state.append(1 if self.token_balance > 0 else 0)
+        # state.append(self.get_total_balance())
+        state.append(0)
 
         return (state, step_reward, terminated, truncated,
                 {'stonks_state': self.StonksState(state, self.context_window, self.token_prices.timestamps[self.i])})
@@ -130,11 +131,10 @@ class StonksEnv(gym.Env):
     # converts continuous -1 to 1 input to BUY, SELL, HOLD enum
     @staticmethod
     def get_action(action: float):
-        if action < -0.5:
+        if action < 0:
             return StonkAction.SELL
-        if action > 0.5:
+        else:
             return StonkAction.BUY
-        return StonkAction.HOLD
 
     def get_current_price(self):
         return self.token_prices.data[self.i]
