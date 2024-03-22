@@ -167,6 +167,7 @@ class StonksEnv(gym.Env):
 
         return self.get_total_balance()
 
+    # -1: only cash, 0: 50/50 split, 1: only hold tokens
     def process_action(self, token_ratio):
         # get_current_price returns the last average price so trades are done on the last price data seen by the
         # agent. This should be a good approximation, but it may be more accurate to compute balances based on the
