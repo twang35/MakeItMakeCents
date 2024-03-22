@@ -138,11 +138,11 @@ class TD3Runner:
                 eval_reward = self.eval_policy(show_chart=True)
                 train_rewards.append(episode_reward)
                 eval_rewards.append(eval_reward)
-                print(f'eval reward: {eval_reward}')
+                print(f'eval reward: {Decimal(eval_reward):.2E}')
 
                 if eval_reward > max_eval_reward:
                     max_eval_reward = eval_reward
-                    if max_eval_reward > 20_000:
+                    if max_eval_reward > 1e8:
                         self.policy.save(f"./models/{self.model_name}")
                         print(f"saved model {self.model_name}")
 
