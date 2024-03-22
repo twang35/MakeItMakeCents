@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import matplotlib.pyplot as plt
 
 from ml.create_test_data import TestDataTypes
@@ -23,9 +25,9 @@ class TD3Runner:
         # BATCH_SIZE = 1024
 
         self.explore_noise = 0.1  # Std of Gaussian exploration noise
-        self.random_policy_steps = 5000  # Time steps that initial random policy is used
+        self.random_policy_steps = 5_000  # Time steps that initial random policy is used
 
-        self.learning_rate = 3e-7
+        self.learning_rate = 3e-6
 
         self.max_train_timesteps = 5_000_000_000
         self.eval_interval = 5000
@@ -116,7 +118,7 @@ class TD3Runner:
                     f"Total steps: {t + 1}, "
                     f"Episode Num: {episode_num + 1}, "
                     f"Episode steps: {episode_timesteps}, "
-                    f"Reward: {episode_reward:.3f}")
+                    f"Reward: {Decimal(episode_reward):.2E}")
                 state, done = self.train_env.reset(), 0
                 if episode_reward > max_train_reward:
                     max_train_reward = episode_reward
@@ -214,9 +216,9 @@ class TD3Runner:
 
         next_eval = abs((timestep % self.eval_interval) - self.eval_interval)
         plt.xlabel(f'Episode ({len(train_rewards)}), '
-                   f'next eval: {next_eval}', fontsize=20)
-        plt.ylabel(f'Reward (max eval: {max(test_rewards):5.1f}'
-                   f', max train: {max_training_reward:5.1f})', fontsize=15)
+                   f'next eval: {next_eval}', fontsize=15)
+        plt.ylabel(f'Reward (max eval: {Decimal(max(test_rewards)):.2E}, '
+                   f'max train: {Decimal(max_training_reward):.2E})', fontsize=13)
         plt.plot(train_rewards, label='Train Reward')
         plt.plot(test_rewards, label='Test Reward')
         # plt.hlines(REWARD_THRESHOLD, 0, len(test_rewards), color='r')
