@@ -42,7 +42,7 @@ def near_optimal_policy(state, previous_action):
     if state[5] > 0 and state[3] > 0.7:
         # sell all tokens
         return [-1]
-    elif state[4] > 0 and state[3] < 0.55:  # scaled 102
+    elif state[4] > 0 and state[3] < 0.55:  # scaled 92
         # buy all tokens
         return [1]
     return previous_action
