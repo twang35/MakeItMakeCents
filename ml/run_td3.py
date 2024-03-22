@@ -2,7 +2,7 @@ from decimal import Decimal
 
 import matplotlib.pyplot as plt
 
-from ml.create_test_data import TestDataTypes, near_optimal_policy
+from ml.create_test_data import TestDataTypes
 from td3 import TD3
 from replay_buffer import ReplayBuffer
 
@@ -162,21 +162,18 @@ class TD3Runner:
         done = False
         state = self.eval_env.reset()
         total_reward = 0
-        previous_action = [-1]
         actions = []
         rewards = []
         timestamps = []
 
         while not done:
-            # action = self.policy.select_action(np.array(state))
-            action = near_optimal_policy(state, previous_action)
+            action = self.policy.select_action(np.array(state))
             state, reward, done, truncated, info = self.eval_env.step(action)
             total_reward += reward
             actions.append(action)
             rewards.append(total_reward)
             timestamps.append(info['stonks_state'].timestamp)
             done = done or truncated
-            previous_action = action
 
         if show_chart:
             self.show_eval_chart(actions, rewards, timestamps)
