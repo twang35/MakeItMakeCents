@@ -4,7 +4,7 @@ from decimal import Decimal
 
 import matplotlib.pyplot as plt
 
-from ml.create_test_data import TestDataTypes
+from ml.create_test_data import TestDataTypes, near_optimal_policy
 from td3 import TD3
 from replay_buffer import ReplayBuffer
 
@@ -14,9 +14,7 @@ from database import *
 
 class TD3Runner:
     def __init__(self, eval_only=False, load_file=''):
-        # 24 latest price, remaining cash, token balance, total balance
-        self.state_dim = 27
-        # self.state_dim = 7
+        self.state_dim = StonksState.state_dim
         self.hidden_dim_1 = 64
         self.hidden_dim_2 = 32
         self.action_dim = 1  # -1 to 1 representing buy, sell, hold

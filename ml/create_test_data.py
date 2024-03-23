@@ -36,7 +36,7 @@ def save_to_test_data_table(wave, data_type, start_date='2024-01-02 03:00:00'):
         cur_date += datetime.timedelta(minutes=60)
 
 
-# total reward: 1.18E+12
+# total reward: 1.18E+12 total balance, 6.4E+7 ratio reward
 def near_optimal_policy(state, previous_action):
     # has token balance and price above scaled 108
     if state[5] > 0 and state[3] > 0.7:

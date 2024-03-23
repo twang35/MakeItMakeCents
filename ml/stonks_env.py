@@ -21,6 +21,19 @@ class StonkAction(Enum):
     SELL = 3
 
 
+class StonksState:
+    context_window = 24
+    state_dim = context_window + 3
+
+    def __init__(self, state, timestamp):
+        # context_window (24) latest prices, remaining cash, token balance, total balance
+        self.price_state = state[0:self.context_window]
+        self.remaining_cash = state[self.context_window]
+        self.token_balance = state[self.context_window + 1]
+        self.total_balance = state[self.context_window + 2]
+        self.timestamp = timestamp
+
+
 class StonksEnv(gym.Env):
     metadata = {
         "render_modes": [
@@ -37,7 +50,6 @@ class StonksEnv(gym.Env):
             verbose: bool = False,
             txn_cost=20,
             starting_cash=10000,
-            context_window=24,
             granularity = datetime.timedelta(minutes=60),
     ):
         self.token_prices = self.convert_to_hourly_average(token_prices, granularity)
@@ -48,9 +60,9 @@ class StonksEnv(gym.Env):
         self.remaining_cash = starting_cash
         self.token_balance = 0
 
-        self.context_window = context_window
+        self.context_window = StonksState.context_window
         # always start the env with at least enough data to populate the full context_window
-        self.i = context_window
+        self.i = StonksState.context_window
         self.granularity = granularity
 
         self.reward = 0.0
@@ -84,7 +96,6 @@ class StonksEnv(gym.Env):
         self.token_balance = env.token_balance
 
         self.context_window = env.context_window
-        # always start the env with at least enough data to populate the full context_window
         self.i = env.i
         self.granularity = env.granularity
 
@@ -112,14 +123,6 @@ class StonksEnv(gym.Env):
 
         zero_step = self.step([-1])  # start with 0 tokens
         return zero_step[0]
-
-    class StonksState:
-        def __init__(self, state, context_window, timestamp):
-            self.price_state = state[0:context_window]
-            self.remaining_cash = state[context_window]
-            self.token_balance = state[context_window + 1]
-            self.total_balance = state[context_window + 2]
-            self.timestamp = timestamp
 
     def step(self, action):
         terminated = False
@@ -149,7 +152,7 @@ class StonksEnv(gym.Env):
         state.append(self.cash_scaler.transform(np.array([[self.get_total_balance()]]))[0][0])
 
         return (state, step_reward, terminated, truncated,
-                {'stonks_state': self.StonksState(state, self.context_window, self.token_prices.timestamps[self.i])})
+                {'stonks_state': StonksState(state, self.token_prices.timestamps[self.i])})
 
     # converts continuous -1 to 1 input to BUY, SELL, HOLD enum
     @staticmethod
@@ -203,7 +206,8 @@ class StonksEnv(gym.Env):
 
         self.i += 1
 
-        return self.get_total_balance()
+        # all rewards are a ratio of starting_cash
+        return self.get_total_balance() / self.starting_cash
 
     def get_price_state(self):
         price_state = []
