@@ -1,3 +1,5 @@
+import random
+from copy import deepcopy
 from decimal import Decimal
 
 import matplotlib.pyplot as plt
@@ -13,14 +15,14 @@ from database import *
 class TD3Runner:
     def __init__(self, eval_only=False, load_file=''):
         # 24 latest price, remaining cash, token balance, total balance
-        # self.state_dim = 27
-        self.state_dim = 7
+        self.state_dim = 27
+        # self.state_dim = 7
         self.hidden_dim_1 = 64
         self.hidden_dim_2 = 32
         self.action_dim = 1  # -1 to 1 representing buy, sell, hold
         self.max_action = 1  # max upper bound for action
-        self.policy_noise = 0.05  # Noise added to target policy during critic update
-        self.noise_clip = 0.2  # Range to clip target policy noise
+        self.policy_noise = 0.2  # Noise added to target policy during critic update
+        self.noise_clip = 0.4  # Range to clip target policy noise
         self.batch_size = 256  # How many timesteps for each training session for the actor and critic
         # BATCH_SIZE = 1024
 
@@ -31,6 +33,8 @@ class TD3Runner:
 
         self.max_train_timesteps = 5_000_000_000
         self.eval_interval = 5000
+
+        self.run_sim = False
 
         self.eval_only = eval_only
         self.load_file = load_file
@@ -52,6 +56,7 @@ class TD3Runner:
         self.train_env = StonksEnv(load_structured_test_data_prices(cursor, TestDataTypes.easy_horizontal),
                                    show_price_map=False)
         self.eval_env = StonksEnv(load_structured_test_data_prices(cursor, TestDataTypes.easy_horizontal))
+        self.sim_env = StonksEnv(load_structured_test_data_prices(cursor, TestDataTypes.easy_horizontal))
 
         self.policy = TD3(state_dim=self.state_dim, action_dim=self.action_dim,
                           hidden_dim_1=self.hidden_dim_1, hidden_dim_2=self.hidden_dim_2,
@@ -63,9 +68,16 @@ class TD3Runner:
         plt.ion()
 
     def run(self):
-        print(f'start training with \n'
-              f'explore_noise: {self.explore_noise} \n'
-              f'learning_rate: {self.learning_rate}')
+        print(f'''smaller batch size, same learning rate, no sim training, larger context window with:
+              explore_noise: {self.explore_noise}
+              learning_rate: {self.learning_rate}
+              run_sim:      {self.run_sim}
+              policy_noise: {self.policy_noise}
+              noise_clip:   {self.noise_clip}
+              batch_size:   {self.batch_size}
+              hidden_dims:  {self.hidden_dim_1, self.hidden_dim_2}
+              random_policy_steps: {self.random_policy_steps}
+              ''')
 
         state = self.train_env.reset()
         train_rewards = []
@@ -98,6 +110,14 @@ class TD3Runner:
                         self.policy.select_action(np.array(state))
                         + np.random.normal(0, self.max_action * self.explore_noise, size=self.action_dim)
                 ).clip(-self.max_action, self.max_action)
+
+            if self.run_sim:
+                # simulate opposite extreme action
+                sim_action = [1] if action[0] < 0 else [-1]
+                self.sim_env.copy(self.train_env)
+                sim_next_state, sim_reward, sim_terminated, sim_truncated, sim_info = self.sim_env.step(sim_action)
+                sim_done = float(sim_terminated or sim_truncated)
+                replay_buffer.add(state, sim_action, sim_next_state, sim_reward, sim_done)
 
             # Perform action
             next_state, reward, terminated, truncated, info = self.train_env.step(action)
@@ -133,12 +153,12 @@ class TD3Runner:
                                           timestep=t, max_training_reward=max_train_reward)
 
             if t % self.eval_interval == 0:
-                print(f'steps/sec: {self.eval_interval / (time.time() - start)}')
                 # append to both train and eval to keep them at the index on the chart
                 eval_reward = self.eval_policy(show_chart=True)
                 train_rewards.append(episode_reward)
                 eval_rewards.append(eval_reward)
-                print(f'eval reward: {Decimal(eval_reward):.2E}')
+                print(f'steps/sec: {self.eval_interval / (time.time() - start)}, '
+                      f'eval reward: {Decimal(eval_reward):.2E}')
 
                 if eval_reward > max_eval_reward:
                     max_eval_reward = eval_reward

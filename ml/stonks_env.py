@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 import math
 from typing import Optional, Union
@@ -35,7 +37,7 @@ class StonksEnv(gym.Env):
             verbose: bool = False,
             txn_cost=20,
             starting_cash=10000,
-            context_window=4,
+            context_window=24,
             granularity = datetime.timedelta(minutes=60),
     ):
         self.token_prices = self.convert_to_hourly_average(token_prices, granularity)
@@ -73,6 +75,22 @@ class StonksEnv(gym.Env):
         self.token_scaler.fit(np.array([0, 1000]).reshape(-1, 1))
 
         self.render_mode = render_mode
+
+    def copy(self, env: StonksEnv):
+        # note: make sure each variable being copied is a primitive so that the copy doesn't change the actual value
+        self.txn_cost = env.txn_cost
+        self.starting_cash = env.starting_cash
+        self.remaining_cash = env.remaining_cash
+        self.token_balance = env.token_balance
+
+        self.context_window = env.context_window
+        # always start the env with at least enough data to populate the full context_window
+        self.i = env.i
+        self.granularity = env.granularity
+
+        self.reward = env.reward
+        self.prev_reward = env.prev_reward
+        self.verbose = env.verbose
 
     def get_total_balance(self):
         return self.remaining_cash + self.token_balance * self.get_current_price()
