@@ -27,7 +27,7 @@ class TD3Runner:
         self.explore_noise = 0.1  # Std of Gaussian exploration noise
         self.random_policy_steps = 5_000  # Time steps that initial random policy is used
 
-        self.learning_rate = 3e-6
+        self.learning_rate = 1e-5
 
         self.max_train_timesteps = 5_000_000_000
         self.eval_interval = 5000
@@ -63,10 +63,22 @@ class TD3Runner:
         if self.load_file != '':
             self.policy.load(f"./{self.load_file}")
 
+        self.training_loss = self.TrainingLoss(self.random_policy_steps)
+
         plt.ion()
 
+    class TrainingLoss:
+        def __init__(self, random_policy_steps):
+            self.actor_loss = [0] * random_policy_steps
+            self.critic_loss = [0] * random_policy_steps
+
+        def append_losses(self, actor_loss, critic_loss):
+            self.actor_loss.append(actor_loss)
+            self.critic_loss.append(critic_loss)
+
+
     def run(self):
-        print(f'''smaller batch size, same learning rate, no sim training, larger context window with:
+        print(f'''different learning rates, no sim training, larger context window with:
               explore_noise: {self.explore_noise}
               learning_rate: {self.learning_rate}
               run_sim:      {self.run_sim}
@@ -129,14 +141,17 @@ class TD3Runner:
 
             # Train agent after collecting sufficient data
             if t >= self.random_policy_steps:
-                self.policy.train(replay_buffer, self.batch_size)
+                actor_loss, critic_loss = self.policy.train(replay_buffer, self.batch_size)
+                self.training_loss.append_losses(actor_loss.item(), critic_loss.item())
 
             if done:
                 print(
                     f"Total steps: {t + 1}, "
                     f"Episode Num: {episode_num + 1}, "
                     f"Episode steps: {episode_timesteps}, "
-                    f"Reward: {Decimal(episode_reward):.2E}")
+                    f"Reward: {Decimal(episode_reward):.2E}, ")
+                    # f"Actor loss: {Decimal(self.training_loss.actor_loss[-1]):.2E}, "
+                    # f"Critic loss: {Decimal(self.training_loss.critic_loss[1]):.2E}, ")
                 state, done = self.train_env.reset(), 0
                 if episode_reward > max_train_reward:
                     max_train_reward = episode_reward
@@ -149,6 +164,7 @@ class TD3Runner:
                 episode_num += 1
                 self.update_training_plot(test_rewards=eval_rewards, train_rewards=train_rewards,
                                           timestep=t, max_training_reward=max_train_reward)
+                self.update_loss_plot()
 
             if t % self.eval_interval == 0:
                 # append to both train and eval to keep them at the index on the chart
@@ -160,7 +176,7 @@ class TD3Runner:
 
                 if eval_reward > max_eval_reward:
                     max_eval_reward = eval_reward
-                    if max_eval_reward > 1e8:
+                    if max_eval_reward > 1e6:
                         self.policy.save(f"./models/{self.model_name}")
                         print(f"saved model {self.model_name}")
 
@@ -206,17 +222,16 @@ class TD3Runner:
         ax1 = fig.get_axes()[0]
         ax2 = ax1.twinx()
 
-        ax1.plot(timestamps, rewards, color='b', label='reward')
-        ax1.set_ylabel(f'Eval Rewards {Decimal(rewards[-1]):.2E}')
-        ax2.plot(timestamps, actions, color='r', label='action')
-        ax2.set_ylabel('Eval Actions')
+        ax2.plot(timestamps, rewards, color='b', label='reward')
+        ax2.set_ylabel(f'Eval Rewards {Decimal(rewards[-1]):.2E}', color='b')
+        ax1.plot(timestamps, actions, color='r', label='action')
+        ax1.set_ylabel('Eval Actions', color='r')
 
         ax1.set_xlabel('timestamp')
 
         # add a second chart for buy/sell/hold behavior with actual action num and lines at 0.5 and -0.5
 
-        plt.legend(loc='upper left')
-
+        fig.legend()
         fig.canvas.start_event_loop(0.001)  # this updates the plot and doesn't steal window focus
 
     def update_training_plot(self, test_rewards, train_rewards, timestep, max_training_reward,
@@ -242,6 +257,23 @@ class TD3Runner:
         # plt.hlines(REWARD_THRESHOLD, 0, len(test_rewards), color='r')
         plt.legend(loc='upper left')
 
+        fig.canvas.start_event_loop(0.001)  # this updates the plot and doesn't steal window focus
+
+    def update_loss_plot(self):
+        fig = plt.figure(3, figsize=self.figure_size)
+        plt.clf()
+        plt.title(f'Training loss {self.model_name}')
+
+        ax1 = fig.get_axes()[0]
+        ax2 = ax1.twinx()
+
+        ax2.plot(self.training_loss.actor_loss, color='b', label='actor_loss')
+        ax2.set_ylabel(f'Actor loss {Decimal(self.training_loss.actor_loss[-1]):.2E}', color='b')
+        ax1.plot(self.training_loss.critic_loss, color='r', label='critic_loss')
+        ax1.set_ylabel(f'Critic loss {Decimal(self.training_loss.critic_loss[-1]):.2E}', color='r')
+
+        ax1.set_xlabel('episode')
+        fig.legend()
         fig.canvas.start_event_loop(0.001)  # this updates the plot and doesn't steal window focus
 
 

@@ -23,14 +23,14 @@ class StonkAction(Enum):
 
 class StonksState:
     context_window = 24
-    state_dim = context_window + 3
+    state_dim = context_window + 0
 
     def __init__(self, state, timestamp):
         # context_window (24) latest prices, remaining cash, token balance, total balance
         self.price_state = state[0:self.context_window]
-        self.remaining_cash = state[self.context_window]
-        self.token_balance = state[self.context_window + 1]
-        self.total_balance = state[self.context_window + 2]
+        # self.remaining_cash = state[self.context_window]
+        # self.token_balance = state[self.context_window + 1]
+        # self.total_balance = state[self.context_window + 2]
         self.timestamp = timestamp
 
 
@@ -58,6 +58,7 @@ class StonksEnv(gym.Env):
         self.txn_cost = txn_cost
         self.starting_cash = starting_cash
         self.remaining_cash = starting_cash
+        self.previous_total_balance = starting_cash
         self.token_balance = 0
 
         self.context_window = StonksState.context_window
@@ -93,6 +94,7 @@ class StonksEnv(gym.Env):
         self.txn_cost = env.txn_cost
         self.starting_cash = env.starting_cash
         self.remaining_cash = env.remaining_cash
+        self.previous_total_balance = env.previous_total_balance
         self.token_balance = env.token_balance
 
         self.context_window = env.context_window
@@ -147,9 +149,9 @@ class StonksEnv(gym.Env):
         price_state = self.price_scaler.transform(np.array(price_state).reshape(-1, 1))
         state.extend(price_state.reshape(1, -1)[0])
         # balances
-        state.append(self.cash_scaler.transform(np.array([[self.remaining_cash]]))[0][0])
-        state.append(self.token_scaler.transform(np.array([[self.token_balance]]))[0][0])
-        state.append(self.cash_scaler.transform(np.array([[self.get_total_balance()]]))[0][0])
+        # state.append(self.cash_scaler.transform(np.array([[self.remaining_cash]]))[0][0])
+        # state.append(self.token_scaler.transform(np.array([[self.token_balance]]))[0][0])
+        # state.append(self.cash_scaler.transform(np.array([[self.get_total_balance()]]))[0][0])
 
         return (state, step_reward, terminated, truncated,
                 {'stonks_state': StonksState(state, self.token_prices.timestamps[self.i])})
