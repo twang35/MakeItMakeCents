@@ -21,13 +21,15 @@ class TD3Runner:
         self.max_action = 1  # max upper bound for action
         self.policy_noise = 0.2  # Noise added to target policy during critic update
         self.noise_clip = 0.4  # Range to clip target policy noise
-        self.batch_size = 256  # How many timesteps for each training session for the actor and critic
+        self.batch_size = 128  # How many timesteps for each training session for the actor and critic
         # BATCH_SIZE = 1024
 
-        self.explore_noise = 0.1  # Std of Gaussian exploration noise
+        self.start_training_note = 'higher explore noise, no sim training, larger context window with:'
+
+        self.explore_noise = 0.2  # Std of Gaussian exploration noise
         self.random_policy_steps = 5_000  # Time steps that initial random policy is used
 
-        self.learning_rate = 1e-5
+        self.learning_rate = 1e-4
 
         self.max_train_timesteps = 5_000_000_000
         self.eval_interval = 5000
@@ -78,7 +80,7 @@ class TD3Runner:
 
 
     def run(self):
-        print(f'''different learning rates, no sim training, larger context window with:
+        print(f'''{self.start_training_note}
               explore_noise: {self.explore_noise}
               learning_rate: {self.learning_rate}
               run_sim:      {self.run_sim}
@@ -94,7 +96,7 @@ class TD3Runner:
         eval_rewards = []
         max_eval_reward = -10_000
         max_train_reward = -10_000
-        episode_reward = 0
+        episode_reward = 1
         episode_timesteps = 0
         episode_num = 0
 
@@ -137,7 +139,7 @@ class TD3Runner:
             replay_buffer.add(state, action, next_state, reward, done)
 
             state = next_state
-            episode_reward += reward
+            episode_reward *= reward
 
             # Train agent after collecting sufficient data
             if t >= self.random_policy_steps:
@@ -159,7 +161,7 @@ class TD3Runner:
                 train_rewards.append(episode_reward)
                 eval_rewards.append(eval_reward)
                 # +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
-                episode_reward = 0
+                episode_reward = 1
                 episode_timesteps = 0
                 episode_num += 1
                 self.update_training_plot(test_rewards=eval_rewards, train_rewards=train_rewards,
@@ -195,7 +197,7 @@ class TD3Runner:
     def eval_policy(self, show_chart=False):
         done = False
         state = self.eval_env.reset()
-        total_reward = 0
+        total_reward = 1
         actions = []
         rewards = []
         timestamps = []
@@ -203,9 +205,10 @@ class TD3Runner:
         while not done:
             action = self.policy.select_action(np.array(state))
             state, reward, done, truncated, info = self.eval_env.step(action)
-            total_reward += reward
+            total_balance = info['stonks_state'].total_balance
+            total_reward *= reward
             actions.append(action)
-            rewards.append(total_reward)
+            rewards.append(total_balance)
             timestamps.append(info['stonks_state'].timestamp)
             done = done or truncated
 

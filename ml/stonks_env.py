@@ -25,12 +25,13 @@ class StonksState:
     context_window = 24
     state_dim = context_window + 0
 
-    def __init__(self, state, timestamp):
+    def __init__(self, state, total_balance, timestamp):
         # context_window (24) latest prices, remaining cash, token balance, total balance
         self.price_state = state[0:self.context_window]
         # self.remaining_cash = state[self.context_window]
         # self.token_balance = state[self.context_window + 1]
         # self.total_balance = state[self.context_window + 2]
+        self.total_balance = total_balance
         self.timestamp = timestamp
 
 
@@ -132,8 +133,7 @@ class StonksEnv(gym.Env):
 
         self.reward = self.process_action(action)
 
-        step_reward = self.reward - self.prev_reward
-        self.prev_reward = self.reward
+        step_reward = self.reward
 
         if self.get_total_balance() < self.txn_cost:
             terminated = True
@@ -154,7 +154,8 @@ class StonksEnv(gym.Env):
         # state.append(self.cash_scaler.transform(np.array([[self.get_total_balance()]]))[0][0])
 
         return (state, step_reward, terminated, truncated,
-                {'stonks_state': StonksState(state, self.token_prices.timestamps[self.i])})
+                {'stonks_state': StonksState(state, self.get_total_balance(),
+                                             self.token_prices.timestamps[self.i])})
 
     # converts continuous -1 to 1 input to BUY, SELL, HOLD enum
     @staticmethod
@@ -208,8 +209,9 @@ class StonksEnv(gym.Env):
 
         self.i += 1
 
-        # all rewards are a ratio of starting_cash
-        return self.get_total_balance() / self.starting_cash
+        percent_change = self.get_total_balance() / self.previous_total_balance
+        self.previous_total_balance = self.get_total_balance()
+        return percent_change
 
     def get_price_state(self):
         price_state = []
