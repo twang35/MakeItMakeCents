@@ -24,7 +24,7 @@ class TD3Runner:
         self.batch_size = 128  # How many timesteps for each training session for the actor and critic
         # BATCH_SIZE = 1024
 
-        self.start_training_note = 'yes sim training, larger context window with:'
+        self.start_training_note = 'discrete training with:'
 
         self.explore_noise = 0.2  # Std of Gaussian exploration noise
         self.random_policy_steps = 5_000  # Time steps that initial random policy is used
@@ -258,6 +258,7 @@ class TD3Runner:
                    f'max train: {Decimal(max_training_reward):.2E})', fontsize=13)
         plt.plot(train_rewards, label='Train Reward')
         plt.plot(test_rewards, label='Eval Reward')
+        plt.yscale("log")
         # plt.hlines(REWARD_THRESHOLD, 0, len(test_rewards), color='r')
         plt.legend(loc='upper left')
 
