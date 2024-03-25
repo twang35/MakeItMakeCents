@@ -24,7 +24,7 @@ class TD3Runner:
         self.batch_size = 128  # How many timesteps for each training session for the actor and critic
         # BATCH_SIZE = 1024
 
-        self.start_training_note = 'higher explore noise, no sim training, larger context window with:'
+        self.start_training_note = 'yes sim training, larger context window with:'
 
         self.explore_noise = 0.2  # Std of Gaussian exploration noise
         self.random_policy_steps = 5_000  # Time steps that initial random policy is used
@@ -34,7 +34,7 @@ class TD3Runner:
         self.max_train_timesteps = 5_000_000_000
         self.eval_interval = 5000
 
-        self.run_sim = False
+        self.run_sim = True
 
         self.eval_only = eval_only
         self.load_file = load_file
@@ -198,6 +198,7 @@ class TD3Runner:
         done = False
         state = self.eval_env.reset()
         total_reward = 1
+        total_balance = 0
         actions = []
         rewards = []
         timestamps = []
@@ -215,7 +216,7 @@ class TD3Runner:
         if show_chart:
             self.show_eval_chart(actions, rewards, timestamps)
 
-        return total_reward
+        return total_balance
 
     def show_eval_chart(self, actions, rewards, timestamps):
         fig = plt.figure(2, figsize=self.figure_size)
@@ -256,7 +257,7 @@ class TD3Runner:
         plt.ylabel(f'Reward (max eval: {Decimal(max(test_rewards)):.2E}, '
                    f'max train: {Decimal(max_training_reward):.2E})', fontsize=13)
         plt.plot(train_rewards, label='Train Reward')
-        plt.plot(test_rewards, label='Test Reward')
+        plt.plot(test_rewards, label='Eval Reward')
         # plt.hlines(REWARD_THRESHOLD, 0, len(test_rewards), color='r')
         plt.legend(loc='upper left')
 
