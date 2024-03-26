@@ -23,7 +23,9 @@ class StonkAction(Enum):
 
 class StonksState:
     context_window = 24
-    state_dim = context_window + 0
+    test_data_state_dim = context_window + 0
+    # context_window * 6: 5 percentiles + 1 price
+    token_data_state_dim = context_window * 6 + 0
 
     def __init__(self, state, total_balance, timestamp):
         # context_window (24) latest prices, remaining cash, token balance, total balance
@@ -46,7 +48,8 @@ class StonksEnv(gym.Env):
     def __init__(
             self,
             token_prices: TimestampData,
-            show_price_map = False,
+            percentile_volume: TimestampData = None,
+            show_price_map=False,
             render_mode: Optional[str] = None,
             verbose: bool = False,
             txn_cost=20,
@@ -56,6 +59,8 @@ class StonksEnv(gym.Env):
         self.token_prices = self.convert_to_hourly_average(token_prices, granularity)
         if show_price_map:
             self.show_price_map()
+        self.percentile_volume = self.align_timestamps(percentile_volume, self.token_prices) \
+            if percentile_volume is not None else percentile_volume
         self.txn_cost = txn_cost
         self.starting_cash = starting_cash
         self.remaining_cash = starting_cash
@@ -82,7 +87,11 @@ class StonksEnv(gym.Env):
         )
 
         self.price_scaler = preprocessing.MinMaxScaler()
-        self.price_scaler.fit(np.array([80, 120]).reshape(-1, 1))
+        min_price = min(self.token_prices.data)
+        max_price = max(self.token_prices.data)
+        self.price_scaler.fit(np.array([min_price, max_price]).reshape(-1, 1))
+        self.volume_scaler = preprocessing.MinMaxScaler()
+        self.volume_scaler.fit(np.array([-100, 100]).reshape(-1, 1))
         self.cash_scaler = preprocessing.MinMaxScaler()
         self.cash_scaler.fit(np.array([0, 100_000]).reshape(-1, 1))
         self.token_scaler = preprocessing.MinMaxScaler()
@@ -148,6 +157,13 @@ class StonksEnv(gym.Env):
         price_state = self.get_unaltered_price_state()
         price_state = self.price_scaler.transform(np.array(price_state).reshape(-1, 1))
         state.extend(price_state.reshape(1, -1)[0])
+        # percentile volume
+        if self.percentile_volume is not None:
+            percentile_volumes = self.get_unaltered_percentile_volumes()
+            for volumes in percentile_volumes:
+                unnormalized_volumes = [volume.percent_buy_sell for volume in volumes]
+                normalized_volumes = self.volume_scaler.transform(np.array(unnormalized_volumes).reshape(-1, 1))
+                state.extend(normalized_volumes.reshape(1, -1)[0])
         # balances
         # state.append(self.cash_scaler.transform(np.array([[self.remaining_cash]]))[0][0])
         # state.append(self.token_scaler.transform(np.array([[self.token_balance]]))[0][0])
@@ -202,7 +218,7 @@ class StonksEnv(gym.Env):
         # current real price instead of acting on a historical average.
 
         # rebalance cash/token holdings based on ratio from action
-        token_ratio = (token_ratio[0] + 1) / 2  # token_ratio starts from -1 to 1 because the Actor is designed this way
+        token_ratio = (token_ratio[0] + 1) / 2  # token_ratio from -1 to 1 because the Actor is designed this way
         total_balance = self.get_total_balance()
         cash_target = total_balance * (1 - token_ratio)
 
@@ -231,6 +247,12 @@ class StonksEnv(gym.Env):
 
     def get_unaltered_price_state(self):
         return self.token_prices.data[self.i - self.context_window + 1: self.i + 1]
+
+    def get_unaltered_percentile_volumes(self):
+        result = []
+        for key in self.percentile_volume.data.keys():
+            result.append(self.percentile_volume.data[key][self.i - self.context_window + 1: self.i + 1])
+        return result
 
     def render(self):
         # nothing to render
@@ -278,3 +300,18 @@ class StonksEnv(gym.Env):
         fig.update_layout(hovermode="x unified")
         fig.show()
         print('done with chart')
+
+    @staticmethod
+    def align_timestamps(source_data: TimestampData, align_to: TimestampData):
+        start = align_to.timestamps[0]
+        end = align_to.timestamps[-1]
+
+        start_i = source_data.timestamps.index(str(start))
+        end_i = source_data.timestamps.index(str(end))
+
+        for key in source_data.data.keys():
+            source_data.data[key] = source_data.data[key][start_i: end_i + 1]
+
+        source_data.timestamps = source_data.timestamps[start_i: end_i + 1]
+        source_data.first_hour = datetime.datetime.fromisoformat(source_data.timestamps[0])
+        return source_data

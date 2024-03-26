@@ -9,12 +9,13 @@ from td3 import TD3
 from replay_buffer import ReplayBuffer
 
 from stonks_env import *
+from charts.volume import generate_volume
 from database import *
 
 
 class TD3Runner:
     def __init__(self, eval_only=False, load_file=''):
-        self.state_dim = StonksState.state_dim
+        self.state_dim = StonksState.token_data_state_dim
         self.hidden_dim_1 = 64
         self.hidden_dim_2 = 32
         self.action_dim = 1  # -1 to 1 representing buy, sell, hold
@@ -24,7 +25,7 @@ class TD3Runner:
         self.batch_size = 128  # How many timesteps for each training session for the actor and critic
         # BATCH_SIZE = 1024
 
-        self.start_training_note = 'discrete training with:'
+        self.start_training_note = 'percentile volume with:'
 
         self.explore_noise = 0.2  # Std of Gaussian exploration noise
         self.random_policy_steps = 5_000  # Time steps that initial random policy is used
@@ -35,6 +36,8 @@ class TD3Runner:
         self.eval_interval = 5000
 
         self.run_sim = True
+
+        self.save_policy_reward_threshold = 1e5
 
         self.eval_only = eval_only
         self.load_file = load_file
@@ -53,10 +56,20 @@ class TD3Runner:
 
         print(f'save_file_name: {self.model_name}')
 
-        self.train_env = StonksEnv(load_structured_test_data_prices(cursor, TestDataTypes.easy_horizontal),
+        # load balances
+        balances_rows = load_balances_table(cursor, token.address)
+
+        # calculate sum of diffs and add to chart output
+        timestamps, percentiles = generate_volume(balances_rows, cursor, token.address,
+                                                  granularity=datetime.timedelta(minutes=60))
+        percentile_volume = TimestampData(percentiles, timestamps)
+
+        price_data = load_structured_prices(cursor, token.address)
+
+        self.train_env = StonksEnv(price_data, percentile_volume=percentile_volume,
                                    show_price_map=False)
-        self.eval_env = StonksEnv(load_structured_test_data_prices(cursor, TestDataTypes.easy_horizontal))
-        self.sim_env = StonksEnv(load_structured_test_data_prices(cursor, TestDataTypes.easy_horizontal))
+        self.eval_env = StonksEnv(price_data, percentile_volume=percentile_volume)
+        self.sim_env = StonksEnv(price_data, percentile_volume=percentile_volume)
 
         self.policy = TD3(state_dim=self.state_dim, action_dim=self.action_dim,
                           hidden_dim_1=self.hidden_dim_1, hidden_dim_2=self.hidden_dim_2,
@@ -178,7 +191,7 @@ class TD3Runner:
 
                 if eval_reward > max_eval_reward:
                     max_eval_reward = eval_reward
-                    if max_eval_reward > 1e6:
+                    if max_eval_reward > self.save_policy_reward_threshold:
                         self.policy.save(f"./models/{self.model_name}")
                         print(f"saved model {self.model_name}")
 
@@ -218,26 +231,6 @@ class TD3Runner:
 
         return total_balance
 
-    def show_eval_chart(self, actions, rewards, timestamps):
-        fig = plt.figure(2, figsize=self.figure_size)
-        plt.clf()
-        plt.title(f'{self.model_name} Eval')
-
-        ax1 = fig.get_axes()[0]
-        ax2 = ax1.twinx()
-
-        ax2.plot(timestamps, rewards, color='b', label='reward')
-        ax2.set_ylabel(f'Eval Rewards {Decimal(rewards[-1]):.2E}', color='b')
-        ax1.plot(timestamps, actions, color='r', label='action')
-        ax1.set_ylabel('Eval Actions', color='r')
-
-        ax1.set_xlabel('timestamp')
-
-        # add a second chart for buy/sell/hold behavior with actual action num and lines at 0.5 and -0.5
-
-        fig.legend()
-        fig.canvas.start_event_loop(0.001)  # this updates the plot and doesn't steal window focus
-
     def update_training_plot(self, test_rewards, train_rewards, timestep, max_training_reward,
                              show_result=False):
         fig = plt.figure(1, figsize=self.figure_size)
@@ -265,7 +258,7 @@ class TD3Runner:
         fig.canvas.start_event_loop(0.001)  # this updates the plot and doesn't steal window focus
 
     def update_loss_plot(self):
-        fig = plt.figure(3, figsize=self.figure_size)
+        fig = plt.figure(2, figsize=self.figure_size)
         plt.clf()
         plt.title(f'Training loss {self.model_name}')
 
@@ -278,6 +271,26 @@ class TD3Runner:
         ax1.set_ylabel(f'Critic loss {Decimal(self.training_loss.critic_loss[-1]):.2E}', color='r')
 
         ax1.set_xlabel('episode')
+        fig.legend()
+        fig.canvas.start_event_loop(0.001)  # this updates the plot and doesn't steal window focus
+
+    def show_eval_chart(self, actions, rewards, timestamps):
+        fig = plt.figure(3, figsize=self.figure_size)
+        plt.clf()
+        plt.title(f'{self.model_name} Eval')
+
+        ax1 = fig.get_axes()[0]
+        ax2 = ax1.twinx()
+
+        ax2.plot(timestamps, rewards, color='b', label='reward')
+        ax2.set_ylabel(f'Eval Rewards {Decimal(rewards[-1]):.2E}', color='b')
+        ax1.plot(timestamps, actions, color='r', label='action')
+        ax1.set_ylabel('Eval Actions', color='r')
+
+        ax1.set_xlabel('timestamp')
+
+        # add a second chart for buy/sell/hold behavior with actual action num and lines at 0.5 and -0.5
+
         fig.legend()
         fig.canvas.start_event_loop(0.001)  # this updates the plot and doesn't steal window focus
 
