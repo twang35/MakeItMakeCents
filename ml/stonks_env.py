@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import datetime
 import math
 from typing import Optional, Union
@@ -59,7 +60,7 @@ class StonksEnv(gym.Env):
         self.token_prices = self.convert_to_hourly_average(token_prices, granularity)
         if show_price_map:
             self.show_price_map()
-        self.percentile_volume = self.align_timestamps(percentile_volume, self.token_prices) \
+        self.percentile_volume = self.align_timestamps(copy.deepcopy(percentile_volume), self.token_prices) \
             if percentile_volume is not None else percentile_volume
         self.txn_cost = txn_cost
         self.starting_cash = starting_cash

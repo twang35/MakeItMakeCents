@@ -25,7 +25,7 @@ class TD3Runner:
         self.batch_size = 128  # How many timesteps for each training session for the actor and critic
         # BATCH_SIZE = 1024
 
-        self.start_training_note = 'percentile volume with:'
+        self.start_training_note = 'percentile volume with: '
 
         self.explore_noise = 0.2  # Std of Gaussian exploration noise
         self.random_policy_steps = 5_000  # Time steps that initial random policy is used
@@ -38,6 +38,7 @@ class TD3Runner:
         self.run_sim = True
 
         self.save_policy_reward_threshold = 1e5
+        self.validation_ratio = 0.2  # ratio of data to reserve for validation
 
         self.eval_only = eval_only
         self.load_file = load_file
@@ -45,7 +46,9 @@ class TD3Runner:
         # self.load_file = 'models/saved/term3_overfit'
         # self.load_file = 'models/default_model'
 
-        self.figure_size = (8, 5)
+        self.figure_size = (7, 5)
+        self.eval_figure_num = 3
+        self.validation_figure_num = 4
 
         conn = create_connection()
         cursor = conn.cursor()
@@ -65,11 +68,17 @@ class TD3Runner:
         percentile_volume = TimestampData(percentiles, timestamps)
 
         price_data = load_structured_prices(cursor, token.address)
+        validation_split = round(len(price_data.data) * (1 - self.validation_ratio))
+        training_data = TimestampData(price_data.data[:validation_split], price_data.timestamps[:validation_split])
+        validation_data = TimestampData(price_data.data[validation_split:], price_data.timestamps[validation_split:])
 
-        self.train_env = StonksEnv(price_data, percentile_volume=percentile_volume,
+        # training envs. eval_env runs the model on training data
+        self.train_env = StonksEnv(training_data, percentile_volume=percentile_volume,
                                    show_price_map=False)
-        self.eval_env = StonksEnv(price_data, percentile_volume=percentile_volume)
-        self.sim_env = StonksEnv(price_data, percentile_volume=percentile_volume)
+        self.eval_env = StonksEnv(training_data, percentile_volume=percentile_volume)
+        self.sim_env = StonksEnv(training_data, percentile_volume=percentile_volume)
+        # validation env that runs the model on validation data that was never explicitly trained on
+        self.validation_env = StonksEnv(validation_data, percentile_volume=percentile_volume)
 
         self.policy = TD3(state_dim=self.state_dim, action_dim=self.action_dim,
                           hidden_dim_1=self.hidden_dim_1, hidden_dim_2=self.hidden_dim_2,
@@ -91,7 +100,6 @@ class TD3Runner:
             self.actor_loss.append(actor_loss)
             self.critic_loss.append(critic_loss)
 
-
     def run(self):
         print(f'''{self.start_training_note}
               explore_noise: {self.explore_noise}
@@ -107,6 +115,7 @@ class TD3Runner:
         state = self.train_env.reset()
         train_rewards = []
         eval_rewards = []
+        validation_rewards = []
         max_eval_reward = -10_000
         max_train_reward = -10_000
         episode_reward = 1
@@ -115,11 +124,9 @@ class TD3Runner:
 
         replay_buffer = ReplayBuffer(self.state_dim, self.action_dim)
 
-        eval_reward = self.eval_policy()
-        eval_rewards.append(eval_reward)
+        eval_reward, validation_reward = self.test_policy()
         if self.eval_only:
-            print(f'total reward: {eval_reward}')
-            self.eval_policy(show_chart=True)  # ANOTHER!!
+            print(f'total training eval reward: {eval_reward} and total validation reward: {validation_reward}')
             return
 
         start = time.time()
@@ -173,19 +180,22 @@ class TD3Runner:
                 # append to both train and eval to keep them with the same number
                 train_rewards.append(episode_reward)
                 eval_rewards.append(eval_reward)
+                validation_rewards.append(validation_reward)
                 # +1 to account for 0 indexing. +0 on ep_timesteps since it will increment +1 even if done=True
                 episode_reward = 1
                 episode_timesteps = 0
                 episode_num += 1
-                self.update_training_plot(test_rewards=eval_rewards, train_rewards=train_rewards,
+                self.update_training_plot(eval_rewards=eval_rewards, train_rewards=train_rewards,
+                                          validation_rewards=validation_rewards,
                                           timestep=t, max_training_reward=max_train_reward)
                 self.update_loss_plot()
 
             if t % self.eval_interval == 0:
                 # append to both train and eval to keep them at the index on the chart
-                eval_reward = self.eval_policy(show_chart=True)
+                eval_reward, validation_reward = self.test_policy()
                 train_rewards.append(episode_reward)
                 eval_rewards.append(eval_reward)
+                validation_rewards.append(validation_reward)
                 print(f'steps/sec: {self.eval_interval / (time.time() - start)}, '
                       f'eval reward: {Decimal(eval_reward):.2E}')
 
@@ -195,7 +205,8 @@ class TD3Runner:
                         self.policy.save(f"./models/{self.model_name}")
                         print(f"saved model {self.model_name}")
 
-                self.update_training_plot(test_rewards=eval_rewards, train_rewards=train_rewards,
+                self.update_training_plot(eval_rewards=eval_rewards, train_rewards=train_rewards,
+                                          validation_rewards=validation_rewards,
                                           timestep=t, max_training_reward=max_train_reward)
 
                 start = time.time()
@@ -205,33 +216,10 @@ class TD3Runner:
         plt.show()
         self.train_env.close()
         self.eval_env.close()
+        self.sim_env.close()
         print(f'total time: {time.time() - start}')
 
-    def eval_policy(self, show_chart=False):
-        done = False
-        state = self.eval_env.reset()
-        total_reward = 1
-        total_balance = 0
-        actions = []
-        rewards = []
-        timestamps = []
-
-        while not done:
-            action = self.policy.select_action(np.array(state))
-            state, reward, done, truncated, info = self.eval_env.step(action)
-            total_balance = info['stonks_state'].total_balance
-            total_reward *= reward
-            actions.append(action)
-            rewards.append(total_balance)
-            timestamps.append(info['stonks_state'].timestamp)
-            done = done or truncated
-
-        if show_chart:
-            self.show_eval_chart(actions, rewards, timestamps)
-
-        return total_balance
-
-    def update_training_plot(self, test_rewards, train_rewards, timestep, max_training_reward,
+    def update_training_plot(self, eval_rewards, train_rewards, validation_rewards, timestep, max_training_reward,
                              show_result=False):
         fig = plt.figure(1, figsize=self.figure_size)
         if show_result:
@@ -247,13 +235,14 @@ class TD3Runner:
         next_eval = abs((timestep % self.eval_interval) - self.eval_interval)
         plt.xlabel(f'Episode ({len(train_rewards)}), '
                    f'next eval: {next_eval}', fontsize=15)
-        plt.ylabel(f'Reward (max eval: {Decimal(max(test_rewards)):.2E}, '
+        plt.ylabel(f'Reward (max eval: {Decimal(max(eval_rewards)):.2E}, '
                    f'max train: {Decimal(max_training_reward):.2E})', fontsize=13)
         plt.plot(train_rewards, label='Train Reward')
-        plt.plot(test_rewards, label='Eval Reward')
+        plt.plot(eval_rewards, label='Eval Reward')
+        plt.plot(validation_rewards, label='Validation Reward')
         plt.yscale("log")
         # plt.hlines(REWARD_THRESHOLD, 0, len(test_rewards), color='r')
-        plt.legend(loc='upper left')
+        fig.legend()
 
         fig.canvas.start_event_loop(0.001)  # this updates the plot and doesn't steal window focus
 
@@ -274,22 +263,49 @@ class TD3Runner:
         fig.legend()
         fig.canvas.start_event_loop(0.001)  # this updates the plot and doesn't steal window focus
 
-    def show_eval_chart(self, actions, rewards, timestamps):
-        fig = plt.figure(3, figsize=self.figure_size)
+    def test_policy(self):
+        eval_reward = self.test_policy_on_env(self.eval_env, self.eval_figure_num)
+        validation_reward = self.test_policy_on_env(self.validation_env, self.validation_figure_num)
+        return eval_reward, validation_reward
+
+    def test_policy_on_env(self, env, figure_num):
+        done = False
+        state = env.reset()
+        total_reward = 1
+        total_balance = 0
+        actions = []
+        rewards = []
+        timestamps = []
+
+        while not done:
+            action = self.policy.select_action(np.array(state))
+            state, reward, done, truncated, info = env.step(action)
+            total_balance = info['stonks_state'].total_balance
+            total_reward *= reward
+            actions.append(action)
+            rewards.append(total_balance)
+            timestamps.append(info['stonks_state'].timestamp)
+            done = done or truncated
+
+        self.show_eval_chart(actions, rewards, timestamps, figure_num)
+
+        return total_balance
+
+    def show_eval_chart(self, actions, rewards, timestamps, figure_num):
+        fig = plt.figure(figure_num, figsize=self.figure_size)
         plt.clf()
-        plt.title(f'{self.model_name} Eval')
+        env_type = 'Eval' if figure_num == self.eval_figure_num else 'Validation'
+        plt.title(f'{self.model_name} {env_type}')
 
         ax1 = fig.get_axes()[0]
         ax2 = ax1.twinx()
 
         ax2.plot(timestamps, rewards, color='b', label='reward')
-        ax2.set_ylabel(f'Eval Rewards {Decimal(rewards[-1]):.2E}', color='b')
+        ax2.set_ylabel(f'{env_type} Rewards {Decimal(rewards[-1]):.2E}', color='b')
         ax1.plot(timestamps, actions, color='r', label='action')
-        ax1.set_ylabel('Eval Actions', color='r')
+        ax1.set_ylabel(f'{env_type} Actions', color='r')
 
         ax1.set_xlabel('timestamp')
-
-        # add a second chart for buy/sell/hold behavior with actual action num and lines at 0.5 and -0.5
 
         fig.legend()
         fig.canvas.start_event_loop(0.001)  # this updates the plot and doesn't steal window focus
