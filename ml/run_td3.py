@@ -25,7 +25,7 @@ class TD3Runner:
         self.batch_size = 128  # How many timesteps for each training session for the actor and critic
         # BATCH_SIZE = 1024
 
-        self.start_training_note = 'percentile volume with: '
+        self.start_training_note = 'relative price to last, smaller loss graphs, should have no memory leak? with: '
 
         self.explore_noise = 0.2  # Std of Gaussian exploration noise
         self.random_policy_steps = 5_000  # Time steps that initial random policy is used

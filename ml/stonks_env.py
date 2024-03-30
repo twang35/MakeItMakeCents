@@ -155,9 +155,10 @@ class StonksEnv(gym.Env):
 
         state = []
         # price state
-        price_state = self.get_unaltered_price_state()
-        price_state = self.price_scaler.transform(np.array(price_state).reshape(-1, 1))
-        state.extend(price_state.reshape(1, -1)[0])
+        price_state = self.get_price_state()
+        # price_state = self.price_scaler.transform(np.array(price_state).reshape(-1, 1))
+        # state.extend(price_state.reshape(1, -1)[0])
+        state.extend(price_state)
         # percentile volume
         if self.percentile_volume is not None:
             percentile_volumes = self.get_unaltered_percentile_volumes()
@@ -235,14 +236,10 @@ class StonksEnv(gym.Env):
         return percent_change
 
     def get_price_state(self):
-        price_state = []
-        price_i = self.i - self.context_window + 1
-        starting_price = self.token_prices.data[price_i]
-        price_state.append(starting_price)
-        price_i += 1
-        while price_i <= self.i:
-            price_state.append(self.token_prices.data[price_i] / starting_price)
-            price_i += 1
+        price_state = self.token_prices.data[self.i - self.context_window + 1: self.i + 1]
+        latest_price = price_state[-1]
+        for i in range(len(price_state)):
+            price_state[i] = price_state[i] / latest_price
 
         return price_state
 
