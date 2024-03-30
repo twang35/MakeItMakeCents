@@ -164,7 +164,8 @@ class TD3Runner:
             # Train agent after collecting sufficient data
             if t >= self.random_policy_steps:
                 actor_loss, critic_loss = self.policy.train(replay_buffer, self.batch_size)
-                self.training_loss.append_losses(actor_loss.item(), critic_loss.item())
+                if t % self.eval_interval == 0:
+                    self.training_loss.append_losses(actor_loss.item(), critic_loss.item())
 
             if done:
                 print(
@@ -185,10 +186,10 @@ class TD3Runner:
                 episode_reward = 1
                 episode_timesteps = 0
                 episode_num += 1
+                self.update_loss_plot()
                 self.update_training_plot(eval_rewards=eval_rewards, train_rewards=train_rewards,
                                           validation_rewards=validation_rewards,
-                                          timestep=t, max_training_reward=max_train_reward)
-                self.update_loss_plot()
+                                          timestep=t)
 
             if t % self.eval_interval == 0:
                 # append to both train and eval to keep them at the index on the chart
@@ -207,7 +208,7 @@ class TD3Runner:
 
                 self.update_training_plot(eval_rewards=eval_rewards, train_rewards=train_rewards,
                                           validation_rewards=validation_rewards,
-                                          timestep=t, max_training_reward=max_train_reward)
+                                          timestep=t)
 
                 start = time.time()
 
@@ -219,7 +220,7 @@ class TD3Runner:
         self.sim_env.close()
         print(f'total time: {time.time() - start}')
 
-    def update_training_plot(self, eval_rewards, train_rewards, validation_rewards, timestep, max_training_reward,
+    def update_training_plot(self, eval_rewards, train_rewards, validation_rewards, timestep,
                              show_result=False):
         fig = plt.figure(1, figsize=self.figure_size)
         if show_result:
@@ -236,8 +237,8 @@ class TD3Runner:
         plt.xlabel(f'Episode ({len(train_rewards)}), '
                    f'next eval: {next_eval}', fontsize=15)
         plt.ylabel(f'Reward (max eval: {Decimal(max(eval_rewards)):.2E}, '
-                   f'max train: {Decimal(max_training_reward):.2E})', fontsize=13)
-        plt.plot(train_rewards, label='Train Reward')
+                   f'max vali: {Decimal(max(validation_rewards)):.2E})', fontsize=11)
+        # plt.plot(train_rewards, label='Train Reward')
         plt.plot(eval_rewards, label='Eval Reward')
         plt.plot(validation_rewards, label='Validation Reward')
         plt.yscale("log")
