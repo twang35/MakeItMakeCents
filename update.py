@@ -1,5 +1,4 @@
 import time
-import requests
 from eth_typing import BlockNumber
 from web3 import Web3, HTTPProvider
 from pprint import pprint

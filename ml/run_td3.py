@@ -14,7 +14,7 @@ from database import *
 
 
 class TD3Runner:
-    def __init__(self, eval_only=False, load_file=''):
+    def __init__(self):
         self.state_dim = StonksState.token_data_state_dim
         self.hidden_dim_1 = 128
         self.hidden_dim_2 = 64
@@ -40,45 +40,50 @@ class TD3Runner:
         self.save_policy_reward_threshold = 2e4
         self.validation_ratio = 0.2  # ratio of data to reserve for validation
 
-        self.eval_only = eval_only
-        self.load_file = load_file
-        # self.eval_only = True
-        # self.load_file = 'models/saved/term3_overfit'
-        # self.load_file = 'models/default_model'
+        # self.eval_only = False
+        # self.load_file = ''
+        self.eval_only = True
+        self.load_file = 'models/saved/model_307_2.1e4'
 
         self.figure_size = (7, 5)
         self.eval_figure_num = 3
         self.validation_figure_num = 4
+        self.unseen_data_figure_num = 5
 
-        conn = create_connection()
-        cursor = conn.cursor()
-        token = pepefork
+        self.connection = create_connection()
+        cursor = self.connection.cursor()
+        self.token = pepefork
 
-        self.model_name = 'model'
-        self.model_name = f'{self.model_name}_{reserve_agent_num(conn)}'
+        if self.load_file == '':
+            self.model_name = 'model'
+            self.model_name = f'{self.model_name}_{reserve_agent_num(self.connection)}'
 
-        print(f'save_file_name: {self.model_name}')
+            print(f'save_file_name: {self.model_name}')
+        else:
+            self.model_name = self.load_file
 
         # load balances
-        balances_rows = load_balances_table(cursor, token.address)
+        balances_rows = load_balances_table(cursor, self.token.address)
 
         # calculate sum of diffs and add to chart output
-        timestamps, percentiles = generate_volume(balances_rows, cursor, token.address,
+        timestamps, percentiles = generate_volume(balances_rows, cursor, self.token.address,
                                                   granularity=datetime.timedelta(minutes=60))
-        percentile_volume = TimestampData(percentiles, timestamps)
+        self.percentile_volume = TimestampData(percentiles, timestamps)
 
-        price_data = load_structured_prices(cursor, token.address)
+        self.training_data_before = '2024-03-12 00:00:00'
+
+        price_data = load_structured_prices(cursor, self.token.address, before_timestamp=self.training_data_before)
         validation_split = round(len(price_data.data) * (1 - self.validation_ratio))
         training_data = TimestampData(price_data.data[:validation_split], price_data.timestamps[:validation_split])
         validation_data = TimestampData(price_data.data[validation_split:], price_data.timestamps[validation_split:])
 
         # training envs. eval_env runs the model on training data
-        self.train_env = StonksEnv(training_data, percentile_volume=percentile_volume,
+        self.train_env = StonksEnv(training_data, percentile_volume=self.percentile_volume,
                                    show_price_map=False)
-        self.eval_env = StonksEnv(training_data, percentile_volume=percentile_volume)
-        self.sim_env = StonksEnv(training_data, percentile_volume=percentile_volume)
+        self.eval_env = StonksEnv(training_data, percentile_volume=self.percentile_volume)
+        self.sim_env = StonksEnv(training_data, percentile_volume=self.percentile_volume)
         # validation env that runs the model on validation data that was never explicitly trained on
-        self.validation_env = StonksEnv(validation_data, percentile_volume=percentile_volume)
+        self.validation_env = StonksEnv(validation_data, percentile_volume=self.percentile_volume)
 
         self.policy = TD3(state_dim=self.state_dim, action_dim=self.action_dim,
                           hidden_dim_1=self.hidden_dim_1, hidden_dim_2=self.hidden_dim_2,
@@ -86,6 +91,7 @@ class TD3Runner:
                           learning_rate=self.learning_rate)
         if self.load_file != '':
             self.policy.load(f"./{self.load_file}")
+            print(f'loaded policy: {self.load_file}')
 
         self.training_loss = self.TrainingLoss(1)
 
@@ -126,7 +132,10 @@ class TD3Runner:
 
         eval_reward, validation_reward = self.test_policy()
         if self.eval_only:
+            self.test_policy_on_unseen_data()
+            # self.test_policy()
             print(f'total training eval reward: {eval_reward} and total validation reward: {validation_reward}')
+            input('hit enter to close graphs')
             return
 
         start = time.time()
@@ -267,6 +276,14 @@ class TD3Runner:
         validation_reward = self.test_policy_on_env(self.validation_env, self.validation_figure_num)
         return eval_reward, validation_reward
 
+    def test_policy_on_unseen_data(self):
+        cursor = create_connection().cursor()
+        price_data = load_structured_prices(cursor, self.token.address, after_timestamp=self.training_data_before)
+        unseen_data = TimestampData(price_data.data, price_data.timestamps)
+        unseen_data_env = StonksEnv(unseen_data, percentile_volume=self.percentile_volume,
+                                    show_price_map=True)
+        self.test_policy_on_env(unseen_data_env, self.unseen_data_figure_num)
+
     def test_policy_on_env(self, env, figure_num):
         done = False
         state = env.reset()
@@ -307,6 +324,7 @@ class TD3Runner:
         ax1.set_xlabel('timestamp')
 
         fig.legend()
+        fig.canvas.draw()
         fig.canvas.start_event_loop(0.001)  # this updates the plot and doesn't steal window focus
 
 

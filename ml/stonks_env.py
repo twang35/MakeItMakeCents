@@ -57,7 +57,7 @@ class StonksEnv(gym.Env):
             starting_cash=10000,
             granularity = datetime.timedelta(minutes=60),
     ):
-        self.token_prices = self.convert_to_hourly_average(token_prices, granularity)
+        self.token_prices = self.convert_to_hourly_average(copy.deepcopy(token_prices), granularity)
         if show_price_map:
             self.show_price_map()
         self.percentile_volume = self.align_timestamps(copy.deepcopy(percentile_volume), self.token_prices) \

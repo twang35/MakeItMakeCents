@@ -17,19 +17,23 @@ def add_price_trace(prices, fig, left_offset=0, row=1):
     )
 
 
-def load_prices(cursor, token_address):
+def load_prices(cursor, token_address, after_timestamp=None, before_timestamp=None):
     start_time = time.time()
-    query = f"""
+    after_query = '' if after_timestamp is None else f' AND timestamp >= "{after_timestamp}"'
+    before_query = '' if before_timestamp is None else f' AND timestamp < "{before_timestamp}"'
+    query = f'''
         SELECT 
             price,
             timestamp
         FROM 
             prices
         WHERE
-            token_address='{token_address}'
+            token_address="{token_address}"
+        {after_query}
+        {before_query}
         ORDER BY
             timestamp;
-        """
+        '''
     cursor.execute(query)
     prices = cursor.fetchall()
     print("Total prices rows are:  ", len(prices))
@@ -45,8 +49,8 @@ class TimestampData:
             if type(timestamps[0]) is str else timestamps[0]
 
 
-def load_structured_prices(cursor, token_address):
-    prices = load_prices(cursor, token_address)
+def load_structured_prices(cursor, token_address, after_timestamp=None, before_timestamp=None):
+    prices = load_prices(cursor, token_address, after_timestamp, before_timestamp)
     return TimestampData([row[0] for row in prices], [row[1] for row in prices])
 
 
