@@ -16,8 +16,8 @@ from database import *
 class TD3Runner:
     def __init__(self, eval_only=False, load_file=''):
         self.state_dim = StonksState.token_data_state_dim
-        self.hidden_dim_1 = 64
-        self.hidden_dim_2 = 32
+        self.hidden_dim_1 = 128
+        self.hidden_dim_2 = 64
         self.action_dim = 1  # -1 to 1 representing buy, sell, hold
         self.max_action = 1  # max upper bound for action
         self.policy_noise = 0.2  # Noise added to target policy during critic update
@@ -25,7 +25,7 @@ class TD3Runner:
         self.batch_size = 128  # How many timesteps for each training session for the actor and critic
         # BATCH_SIZE = 1024
 
-        self.start_training_note = 'relative price to last, smaller loss graphs, should have no memory leak? with: '
+        self.start_training_note = 'higher hidden dim with: '
 
         self.explore_noise = 0.2  # Std of Gaussian exploration noise
         self.random_policy_steps = 5_000  # Time steps that initial random policy is used
@@ -37,7 +37,7 @@ class TD3Runner:
 
         self.run_sim = True
 
-        self.save_policy_reward_threshold = 1e5
+        self.save_policy_reward_threshold = 2e4
         self.validation_ratio = 0.2  # ratio of data to reserve for validation
 
         self.eval_only = eval_only
@@ -87,7 +87,7 @@ class TD3Runner:
         if self.load_file != '':
             self.policy.load(f"./{self.load_file}")
 
-        self.training_loss = self.TrainingLoss(self.random_policy_steps)
+        self.training_loss = self.TrainingLoss(1)
 
         plt.ion()
 
@@ -116,7 +116,7 @@ class TD3Runner:
         train_rewards = []
         eval_rewards = []
         validation_rewards = []
-        max_eval_reward = -10_000
+        max_validation_reward = -10_000
         max_train_reward = -10_000
         episode_reward = 1
         episode_timesteps = 0
@@ -173,8 +173,6 @@ class TD3Runner:
                     f"Episode Num: {episode_num + 1}, "
                     f"Episode steps: {episode_timesteps}, "
                     f"Reward: {Decimal(episode_reward):.2E}, ")
-                    # f"Actor loss: {Decimal(self.training_loss.actor_loss[-1]):.2E}, "
-                    # f"Critic loss: {Decimal(self.training_loss.critic_loss[1]):.2E}, ")
                 state, done = self.train_env.reset(), 0
                 if episode_reward > max_train_reward:
                     max_train_reward = episode_reward
@@ -200,9 +198,9 @@ class TD3Runner:
                 print(f'steps/sec: {self.eval_interval / (time.time() - start)}, '
                       f'eval reward: {Decimal(eval_reward):.2E}')
 
-                if eval_reward > max_eval_reward:
-                    max_eval_reward = eval_reward
-                    if max_eval_reward > self.save_policy_reward_threshold:
+                if validation_reward > max_validation_reward:
+                    max_validation_reward = validation_reward
+                    if max_validation_reward > self.save_policy_reward_threshold:
                         self.policy.save(f"./models/{self.model_name}")
                         print(f"saved model {self.model_name}")
 
@@ -260,7 +258,7 @@ class TD3Runner:
         ax1.plot(self.training_loss.critic_loss, color='r', label='critic_loss')
         ax1.set_ylabel(f'Critic loss {Decimal(self.training_loss.critic_loss[-1]):.2E}', color='r')
 
-        ax1.set_xlabel('episode')
+        ax1.set_xlabel('evals')
         fig.legend()
         fig.canvas.start_event_loop(0.001)  # this updates the plot and doesn't steal window focus
 
