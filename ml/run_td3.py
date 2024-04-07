@@ -25,7 +25,7 @@ class TD3Runner:
         self.batch_size = 128  # How many timesteps for each training session for the actor and critic
         # BATCH_SIZE = 1024
 
-        self.start_training_note = 'higher hidden dim with: '
+        self.start_training_note = 'new token, testing learning rate with: '
 
         self.explore_noise = 0.2  # Std of Gaussian exploration noise
         self.random_policy_steps = 5_000  # Time steps that initial random policy is used
@@ -52,7 +52,7 @@ class TD3Runner:
 
         self.connection = create_connection()
         cursor = self.connection.cursor()
-        self.token = pepefork
+        self.token = altlayer
 
         if self.load_file == '':
             self.model_name = 'model'
@@ -71,8 +71,11 @@ class TD3Runner:
         self.percentile_volume = TimestampData(percentiles, timestamps)
 
         self.training_data_before = '2024-03-12 00:00:00'
+        self.training_data_after = '2024-01-26 00:00:00' if self.token == altlayer else None
 
-        price_data = load_structured_prices(cursor, self.token.address, before_timestamp=self.training_data_before)
+        price_data = load_structured_prices(cursor, self.token.address,
+                                            after_timestamp=self.training_data_after,
+                                            before_timestamp=self.training_data_before)
         validation_split = round(len(price_data.data) * (1 - self.validation_ratio))
         training_data = TimestampData(price_data.data[:validation_split], price_data.timestamps[:validation_split])
         validation_data = TimestampData(price_data.data[validation_split:], price_data.timestamps[validation_split:])
@@ -108,6 +111,7 @@ class TD3Runner:
 
     def run(self):
         print(f'''{self.start_training_note}
+              token:        {self.token.name}
               explore_noise: {self.explore_noise}
               learning_rate: {self.learning_rate}
               run_sim:      {self.run_sim}
@@ -243,10 +247,10 @@ class TD3Runner:
         next_eval = abs((timestep % self.eval_interval) - self.eval_interval)
         plt.xlabel(f'Episode ({len(train_rewards)}), '
                    f'next eval: {next_eval}', fontsize=15)
-        plt.ylabel(f'Reward (max eval: {Decimal(max(eval_rewards)):.2E}, '
+        plt.ylabel(f'Reward (max train: {Decimal(max(eval_rewards)):.2E}, '
                    f'max vali: {Decimal(max(validation_rewards)):.2E})', fontsize=11)
         # plt.plot(train_rewards, label='Train Reward')
-        plt.plot(eval_rewards, label='Eval Reward')
+        plt.plot(eval_rewards, label='Training Reward')
         plt.plot(validation_rewards, label='Validation Reward')
         plt.yscale("log")
         # plt.hlines(REWARD_THRESHOLD, 0, len(test_rewards), color='r')
@@ -281,7 +285,7 @@ class TD3Runner:
         price_data = load_structured_prices(cursor, self.token.address, after_timestamp=self.training_data_before)
         unseen_data = TimestampData(price_data.data, price_data.timestamps)
         unseen_data_env = StonksEnv(unseen_data, percentile_volume=self.percentile_volume,
-                                    show_price_map=True)
+                                    show_price_map=True, env_name='unseen data')
         self.test_policy_on_env(unseen_data_env, self.unseen_data_figure_num)
 
     def test_policy_on_env(self, env, figure_num):
@@ -310,7 +314,11 @@ class TD3Runner:
     def show_eval_chart(self, actions, rewards, timestamps, figure_num):
         fig = plt.figure(figure_num, figsize=self.figure_size)
         plt.clf()
-        env_type = 'Eval' if figure_num == self.eval_figure_num else 'Validation'
+        env_type = 'Training'
+        if figure_num == self.validation_figure_num:
+            env_type = 'Validation'
+        if figure_num == self.unseen_data_figure_num:
+            env_type = 'Testing unseen data'
         plt.title(f'{self.model_name} {env_type}')
 
         ax1 = fig.get_axes()[0]

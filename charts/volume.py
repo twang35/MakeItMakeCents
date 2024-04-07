@@ -10,7 +10,7 @@ from database import *
 # then add exchange addresses as a category for balance percentile
 def run_volume():
     print('run_volume')
-    token = pepefork
+    token = altlayer
 
     conn = create_connection()
     cursor = conn.cursor()
@@ -24,7 +24,8 @@ def run_volume():
                                               granularity=datetime.timedelta(minutes=60))
 
     # generate hourly graph
-    create_volume_graph(prices, percentiles, timestamps, token, left_offset=1, view_date_start='2024-03-02 00:00:00')
+    # create_volume_graph(prices, percentiles, timestamps, token, left_offset=1, view_date_start='2024-03-02 00:00:00')
+    create_volume_graph(prices, percentiles, timestamps, token, left_offset=1, view_date_start=None)
 
 
 @dataclass

@@ -51,6 +51,7 @@ class StonksEnv(gym.Env):
             token_prices: TimestampData,
             percentile_volume: TimestampData = None,
             show_price_map=False,
+            env_name='',
             render_mode: Optional[str] = None,
             verbose: bool = False,
             txn_cost=20,
@@ -58,6 +59,7 @@ class StonksEnv(gym.Env):
             granularity = datetime.timedelta(minutes=60),
     ):
         self.token_prices = self.convert_to_hourly_average(copy.deepcopy(token_prices), granularity)
+        self.env_name = env_name
         if show_price_map:
             self.show_price_map()
         self.percentile_volume = self.align_timestamps(copy.deepcopy(percentile_volume), self.token_prices) \
@@ -289,7 +291,7 @@ class StonksEnv(gym.Env):
 
     def show_price_map(self):
         fig = make_subplots()
-        fig.update_layout(title=dict(text=f'hourly price', font=dict(size=25)))
+        fig.update_layout(title=dict(text=f'{self.env_name} hourly price', font=dict(size=25)))
 
         fig.add_trace(go.Scatter(x=self.token_prices.timestamps, y=self.token_prices.data, name='hourly prices'))
 
