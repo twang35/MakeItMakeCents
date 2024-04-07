@@ -40,10 +40,10 @@ class TD3Runner:
         self.save_policy_reward_threshold = 2e4
         self.validation_ratio = 0.2  # ratio of data to reserve for validation
 
-        # self.eval_only = False
-        # self.load_file = ''
-        self.eval_only = True
-        self.load_file = 'models/saved/model_307_2.1e4'
+        self.eval_only = False
+        self.load_file = ''
+        # self.eval_only = True
+        # self.load_file = 'models/saved/model_307_2.4e4'
 
         self.figure_size = (7, 5)
         self.eval_figure_num = 3
@@ -52,7 +52,7 @@ class TD3Runner:
 
         self.connection = create_connection()
         cursor = self.connection.cursor()
-        self.token = altlayer
+        self.token = pepefork
 
         if self.load_file == '':
             self.model_name = 'model'

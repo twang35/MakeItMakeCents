@@ -55,6 +55,7 @@ class StonksEnv(gym.Env):
             render_mode: Optional[str] = None,
             verbose: bool = False,
             txn_cost=20,
+            txn_percent=0.4,
             starting_cash=10000,
             granularity = datetime.timedelta(minutes=60),
     ):
@@ -65,6 +66,7 @@ class StonksEnv(gym.Env):
         self.percentile_volume = self.align_timestamps(copy.deepcopy(percentile_volume), self.token_prices) \
             if percentile_volume is not None else percentile_volume
         self.txn_cost = txn_cost
+        self.txn_percent = txn_percent
         self.starting_cash = starting_cash
         self.remaining_cash = starting_cash
         self.previous_total_balance = starting_cash
@@ -198,14 +200,14 @@ class StonksEnv(gym.Env):
         # buy if cash is available
         if action == StonkAction.BUY and self.remaining_cash > 0:
             # transfer all cash to token
-            self.remaining_cash -= self.txn_cost
+            self.remaining_cash *= (1 - self.txn_percent/100)
             self.token_balance = self.remaining_cash / self.get_current_price()
             self.remaining_cash = 0
         # sell if tokens are available
         elif action == StonkAction.SELL and self.token_balance > 0:
             # transfer all token to cash
             self.remaining_cash = self.token_balance * self.get_current_price()
-            self.remaining_cash -= self.txn_cost
+            # self.remaining_cash -= self.txn_cost
             self.token_balance = 0
         # do nothing on HOLD
 
