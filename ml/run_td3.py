@@ -25,7 +25,7 @@ class TD3Runner:
         self.batch_size = 128  # How many timesteps for each training session for the actor and critic
         # BATCH_SIZE = 1024
 
-        self.start_training_note = 'new token, testing learning rate with: '
+        self.start_training_note = '3 sim steps per training step, more penalized buy with: '
 
         self.explore_noise = 0.2  # Std of Gaussian exploration noise
         self.random_policy_steps = 5_000  # Time steps that initial random policy is used
@@ -162,8 +162,9 @@ class TD3Runner:
                 sim_action = [1] if action[0] < 0 else [-1]
                 self.sim_env.copy(self.train_env)
                 sim_state = state
+                sim_done = float(0)
                 i = 0
-                while i < self.sim_steps:
+                while i < self.sim_steps and not sim_done:
                     sim_next_state, sim_reward, sim_terminated, sim_truncated, sim_info = self.sim_env.step(sim_action)
                     sim_done = float(sim_terminated or sim_truncated)
                     replay_buffer.add(sim_state, sim_action, sim_next_state, sim_reward, sim_done)
