@@ -26,11 +26,12 @@ class StonksState:
     context_window = 24
     test_data_state_dim = context_window + 0
     # context_window * 6: 5 percentiles + 1 price
-    token_data_state_dim = context_window * 6 + 0
+    token_data_state_dim = context_window * 6 + 1
 
-    def __init__(self, state, total_balance, timestamp):
+    def __init__(self, state, previous_action, total_balance, timestamp):
         # context_window (24) latest prices, remaining cash, token balance, total balance
         self.price_state = state[0:self.context_window]
+        self.previous_action = previous_action
         # self.remaining_cash = state[self.context_window]
         # self.token_balance = state[self.context_window + 1]
         # self.total_balance = state[self.context_window + 2]
@@ -71,6 +72,7 @@ class StonksEnv(gym.Env):
         self.remaining_cash = starting_cash
         self.previous_total_balance = starting_cash
         self.token_balance = 0
+        self.previous_action = StonkAction.SELL
 
         self.context_window = StonksState.context_window
         # always start the env with at least enough data to populate the full context_window
@@ -111,6 +113,7 @@ class StonksEnv(gym.Env):
         self.remaining_cash = env.remaining_cash
         self.previous_total_balance = env.previous_total_balance
         self.token_balance = env.token_balance
+        self.previous_action = env.previous_action
 
         self.context_window = env.context_window
         self.i = env.i
@@ -174,9 +177,11 @@ class StonksEnv(gym.Env):
         # state.append(self.cash_scaler.transform(np.array([[self.remaining_cash]]))[0][0])
         # state.append(self.token_scaler.transform(np.array([[self.token_balance]]))[0][0])
         # state.append(self.cash_scaler.transform(np.array([[self.get_total_balance()]]))[0][0])
+        # previous_action so that model can know if it will be charged to continue with BUY action
+        state.append(self.previous_action)
 
         return (state, step_reward, terminated, truncated,
-                {'stonks_state': StonksState(state, self.get_total_balance(),
+                {'stonks_state': StonksState(state, self.previous_action, self.get_total_balance(),
                                              self.token_prices.timestamps[self.i])})
 
     # converts continuous -1 to 1 input to BUY, SELL, HOLD enum
@@ -215,6 +220,7 @@ class StonksEnv(gym.Env):
 
         percent_change = self.get_total_balance() / self.previous_total_balance
         self.previous_total_balance = self.get_total_balance()
+        self.previous_action = -1 if action == StonkAction.SELL else 1
         return percent_change
 
     # -1: only cash, 0: 50/50 split, 1: only hold tokens

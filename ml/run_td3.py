@@ -36,6 +36,7 @@ class TD3Runner:
         self.eval_interval = 5000
 
         self.run_sim = True
+        self.sim_steps = 3
 
         self.save_policy_reward_threshold = 2e4
         self.validation_ratio = 0.2  # ratio of data to reserve for validation
@@ -160,9 +161,14 @@ class TD3Runner:
                 # simulate opposite extreme action
                 sim_action = [1] if action[0] < 0 else [-1]
                 self.sim_env.copy(self.train_env)
-                sim_next_state, sim_reward, sim_terminated, sim_truncated, sim_info = self.sim_env.step(sim_action)
-                sim_done = float(sim_terminated or sim_truncated)
-                replay_buffer.add(state, sim_action, sim_next_state, sim_reward, sim_done)
+                sim_state = state
+                i = 0
+                while i < self.sim_steps:
+                    sim_next_state, sim_reward, sim_terminated, sim_truncated, sim_info = self.sim_env.step(sim_action)
+                    sim_done = float(sim_terminated or sim_truncated)
+                    replay_buffer.add(sim_state, sim_action, sim_next_state, sim_reward, sim_done)
+                    sim_state = sim_next_state
+                    i += 1
 
             # Perform action
             next_state, reward, terminated, truncated, info = self.train_env.step(action)
