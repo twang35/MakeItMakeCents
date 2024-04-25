@@ -41,10 +41,11 @@ class TD3Runner:
         self.save_policy_reward_threshold = 2e4
         self.validation_ratio = 0.2  # ratio of data to reserve for validation
 
-        self.eval_only = False
-        self.load_file = ''
-        # self.eval_only = True
-        # self.load_file = 'models/saved/model_307_2.4e4'
+        # self.eval_only = False
+        # self.load_file = ''
+        self.eval_only = True
+        self.load_file = 'models/saved/model_396_3.44e4'
+        # self.load_file = 'models/model_396'
 
         self.figure_size = (7, 5)
         self.eval_figure_num = 3
@@ -83,11 +84,12 @@ class TD3Runner:
 
         # training envs. eval_env runs the model on training data
         self.train_env = StonksEnv(training_data, percentile_volume=self.percentile_volume,
-                                   show_price_map=False)
+                                   show_price_map=True, env_name='training')
         self.eval_env = StonksEnv(training_data, percentile_volume=self.percentile_volume)
         self.sim_env = StonksEnv(training_data, percentile_volume=self.percentile_volume)
         # validation env that runs the model on validation data that was never explicitly trained on
-        self.validation_env = StonksEnv(validation_data, percentile_volume=self.percentile_volume)
+        self.validation_env = StonksEnv(validation_data, percentile_volume=self.percentile_volume,
+                                        show_price_map=True, env_name='validation')
 
         self.policy = TD3(state_dim=self.state_dim, action_dim=self.action_dim,
                           hidden_dim_1=self.hidden_dim_1, hidden_dim_2=self.hidden_dim_2,

@@ -10,7 +10,7 @@ from database import *
 # then add exchange addresses as a category for balance percentile
 def run_volume():
     print('run_volume')
-    token = altlayer
+    token = pepefork
 
     conn = create_connection()
     cursor = conn.cursor()
