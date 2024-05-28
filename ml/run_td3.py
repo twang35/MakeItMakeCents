@@ -84,12 +84,12 @@ class TD3Runner:
 
         # training envs. eval_env runs the model on training data
         self.train_env = StonksEnv(training_data, percentile_volume=self.percentile_volume,
-                                   show_price_map=True, env_name='training')
+                                   show_price_map=self.eval_only, env_name='training')
         self.eval_env = StonksEnv(training_data, percentile_volume=self.percentile_volume)
         self.sim_env = StonksEnv(training_data, percentile_volume=self.percentile_volume)
         # validation env that runs the model on validation data that was never explicitly trained on
         self.validation_env = StonksEnv(validation_data, percentile_volume=self.percentile_volume,
-                                        show_price_map=True, env_name='validation')
+                                        show_price_map=self.eval_only, env_name='validation')
 
         self.policy = TD3(state_dim=self.state_dim, action_dim=self.action_dim,
                           hidden_dim_1=self.hidden_dim_1, hidden_dim_2=self.hidden_dim_2,
@@ -342,6 +342,8 @@ class TD3Runner:
 
         fig.legend()
         fig.canvas.draw()
+        # replace this call as it sometimes kills the program with:
+        #  "system_error: condition_variable wait failed: Invalid argument"
         fig.canvas.start_event_loop(0.001)  # this updates the plot and doesn't steal window focus
 
 
