@@ -37,18 +37,10 @@ class TechTimeState:
 
 
 class TechTimeEnv(gym.Env):
-    metadata = {
-        "render_modes": [
-            "human",
-            "none",
-        ],
-    }
-
     def __init__(
             self,
             token_prices: TimestampData,
             show_price_map=False,
-            render_mode: Optional[str] = None,
             verbose: bool = False,
             txn_cost=20,
             granularity=datetime.timedelta(minutes=60),
@@ -85,8 +77,6 @@ class TechTimeEnv(gym.Env):
         self.cash_scaler.fit(np.array([0, 100_000]).reshape(-1, 1))
         self.token_scaler = preprocessing.MinMaxScaler()
         self.token_scaler.fit(np.array([0, 1000]).reshape(-1, 1))
-
-        self.render_mode = render_mode
 
         if show_price_map:
             self.show_price_map()
@@ -169,7 +159,8 @@ class TechTimeEnv(gym.Env):
     def get_current_price(self):
         return self.token_prices.data[self.i]
 
-    def process_stonk_action(self, action: StonkAction):
+    def process_stonk_action(self, action: float):
+        action = self.get_action(action[0])
         # get_current_price returns the last average price so trades are done on the last price data seen by the
         # agent. This should be a good approximation, but it may be more accurate to compute balances based on the
         # current real price instead of acting on a historical average.
@@ -190,7 +181,9 @@ class TechTimeEnv(gym.Env):
 
         self.i += 1
 
-        return self.get_total_balance()
+        percent_change = self.get_total_balance() / self.previous_total_balance
+        self.previous_total_balance = self.get_total_balance()
+        return percent_change
 
     # -1: only cash, 0: 50/50 split, 1: only hold tokens
     def process_action(self, token_ratio):
@@ -228,10 +221,6 @@ class TechTimeEnv(gym.Env):
 
     def get_unaltered_price_state(self):
         return self.token_prices.data[self.i - self.context_window + 1: self.i + 1]
-
-    def render(self):
-        # nothing to render
-        pass
 
     @staticmethod
     def convert_to_hourly_average(token_price: TimestampData, granularity: datetime.timedelta):

@@ -7,6 +7,17 @@ class TestDataTypes:
     easy_horizontal = 'easy_horizontal'
 
 
+# eval reward: 1.82E+16 eval reward
+def tony_policy(state, previous_action):
+    if state[5] > 0 and state[3] > 0.7:
+        # sell all tokens
+        return [-1]
+    elif state[4] > 0 and state[3] < 0.3:
+        # buy all tokens
+        return [1]
+    return previous_action
+
+
 def create_test_data():
     # create_test_data_table()
 
@@ -36,19 +47,9 @@ def save_to_test_data_table(wave, data_type, start_date='2024-01-02 03:00:00'):
         cur_date += datetime.timedelta(minutes=60)
 
 
-# eval reward: 1.82E+16 total balance
 def human_policy(state, previous_action):
+    # eval reward to beat: 1.82E+16
     return tony_policy(state, previous_action)
-
-
-def tony_policy(state, previous_action):
-    if state[5] > 0 and state[3] > 0.7:
-        # sell all tokens
-        return [-1]
-    elif state[4] > 0 and state[3] < 0.3:
-        # buy all tokens
-        return [1]
-    return previous_action
 
 
 def chloe_policy(state, previous_action):

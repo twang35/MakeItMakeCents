@@ -19,8 +19,9 @@ class TechTime:
         # self.load_file = load_file
 
         self.eval_only = True
-        self.ml_agent = True
-        self.load_file = 'models/model_457'
+        self.ml_agent = False
+        self.load_file = 'models/model_462'  # 2.86E16
+        # self.load_file = 'models/model_457'  # 3.57E16
 
         if self.eval_only:
             if self.ml_agent is False:
@@ -63,7 +64,7 @@ class TechTime:
             print(f'save_file_name: {self.model_name}')
 
         self.train_env = TechTimeEnv(load_structured_test_data_prices(cursor, TestDataTypes.easy_horizontal),
-                                     show_price_map=True)
+                                     show_price_map=False)
         self.eval_env = TechTimeEnv(load_structured_test_data_prices(cursor, TestDataTypes.easy_horizontal),
                                     show_price_map=False)
         self.sim_env = TechTimeEnv(load_structured_test_data_prices(cursor, TestDataTypes.easy_horizontal))
