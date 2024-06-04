@@ -4,7 +4,7 @@ from decimal import Decimal
 
 import matplotlib.pyplot as plt
 
-from ml.create_test_data import TestDataTypes, near_optimal_policy
+from ml.create_test_data import TestDataTypes, human_policy
 from td3 import TD3
 from replay_buffer import ReplayBuffer
 

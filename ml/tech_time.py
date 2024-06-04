@@ -4,7 +4,7 @@ from decimal import Decimal
 
 import matplotlib.pyplot as plt
 
-from ml.create_test_data import TestDataTypes, near_optimal_policy
+from ml.create_test_data import TestDataTypes, human_policy
 from td3 import TD3
 from replay_buffer import ReplayBuffer
 
@@ -14,32 +14,42 @@ from database import *
 
 class TechTime:
     def __init__(self, eval_only=False, load_file=''):
+        # self.eval_only = False
+        # self.ml_agent = True
+        # self.load_file = load_file
+
+        self.eval_only = True
+        self.ml_agent = True
+        self.load_file = 'models/model_457'
+
+        if self.eval_only:
+            if self.ml_agent is False:
+                print('running eval on human agent')
+            else:
+                print(f'running eval on ml agent: {self.load_file}')
+
+
         self.state_dim = TechTimeState.state_dim
         self.hidden_dim_1 = 64
         self.hidden_dim_2 = 32
         self.action_dim = 1  # -1 to 1 representing buy, sell, hold
         self.max_action = 1  # max upper bound for action
-        self.policy_noise = 0.2  # Noise added to target policy during critic update
-        self.noise_clip = 0.4  # Range to clip target policy noise
+        self.policy_noise = 0.1  # Noise added to target policy during critic update
+        self.noise_clip = 0.2  # Range to clip target policy noise
         self.batch_size = 128  # How many timesteps for each training session for the actor and critic
         # BATCH_SIZE = 1024
 
         self.start_training_note = 'higher explore noise, no sim training, larger context window with:'
 
-        self.explore_noise = 0.2  # Std of Gaussian exploration noise
+        self.explore_noise = 0.1  # Std of Gaussian exploration noise
         self.random_policy_steps = 5_000  # Time steps that initial random policy is used
 
-        self.learning_rate = 5e-5
+        self.learning_rate = 4e-5
 
         self.max_train_timesteps = 5_000_000_000
         self.eval_interval = 5000
 
-        self.run_sim = False
-
-        self.eval_only = eval_only
-        self.load_file = load_file
-        self.eval_only = True
-        self.load_file = 'models/model_417'
+        self.run_sim = True
 
         self.figure_size = (8, 5)
 
@@ -49,7 +59,8 @@ class TechTime:
         self.model_name = 'model'
         self.model_name = f'{self.model_name}_{reserve_agent_num(conn)}'
 
-        print(f'save_file_name: {self.model_name}')
+        if self.eval_only is False:
+            print(f'save_file_name: {self.model_name}')
 
         self.train_env = TechTimeEnv(load_structured_test_data_prices(cursor, TestDataTypes.easy_horizontal),
                                      show_price_map=True)
@@ -101,9 +112,10 @@ class TechTime:
 
         replay_buffer = ReplayBuffer(self.state_dim, self.action_dim)
 
-        eval_reward = self.eval_custom_policy(show_chart=True)
+        eval_reward = self.eval_policy()
         eval_rewards.append(eval_reward)
         if self.eval_only:
+            eval_reward = self.eval_policy(show_chart=True, ml_agent=self.ml_agent, show_plotly=True)
             print(f'total reward: {eval_reward}')
             print(f'total training eval reward: {eval_reward}')
             input('hit enter to close graphs')
@@ -178,7 +190,7 @@ class TechTime:
 
                 if eval_reward > max_eval_reward:
                     max_eval_reward = eval_reward
-                    if max_eval_reward > 1e18:
+                    if max_eval_reward > 1e14:
                         self.policy.save(f"./models/{self.model_name}")
                         print(f"saved model {self.model_name}")
 
@@ -194,7 +206,7 @@ class TechTime:
         self.eval_env.close()
         print(f'total time: {time.time() - start}')
 
-    def eval_policy(self, show_chart=False):
+    def eval_policy(self, show_chart=False, ml_agent=False, show_plotly=False):
         done = False
         state = self.eval_env.reset()
         total_reward = 1
@@ -214,10 +226,12 @@ class TechTime:
 
         if show_chart:
             self.show_eval_chart(actions, rewards, timestamps)
+        if show_plotly:
+            self.eval_custom_policy(ml_agent=ml_agent)
 
         return total_reward
 
-    def eval_custom_policy(self, show_chart=False):
+    def eval_custom_policy(self, ml_agent):
         done = False
         state = self.eval_env.reset()
         total_reward = 1
@@ -227,7 +241,10 @@ class TechTime:
         previous_action = [-1]
 
         while not done:
-            action = near_optimal_policy(np.array(state), previous_action)
+            if ml_agent:
+                action = self.policy.select_action(np.array(state))
+            else:
+                action = human_policy(np.array(state), previous_action)
             state, reward, done, truncated, info = self.eval_env.step(action)
             total_balance = info['stonks_state'].total_balance
             total_reward *= reward
@@ -237,10 +254,21 @@ class TechTime:
             previous_action = action
             done = done or truncated
 
-        if show_chart:
-            self.show_eval_chart(actions, rewards, timestamps)
+        self.show_plotly_eval_chart(actions, rewards, timestamps)
 
         return total_reward
+
+    def show_plotly_eval_chart(self, actions, rewards, timestamps):
+        fig = make_subplots()
+        fig.update_layout(title=dict(text=f'eval results', font=dict(size=25)))
+
+        rewards = [reward/TechTimeState.starting_cash for reward in rewards]
+
+        fig.add_trace(go.Scatter(x=timestamps, y=rewards, name='total rewards'))
+
+        fig.update_yaxes(title_text=f'reward: {rewards[-1]:.2E}', showspikes=True)
+        fig.update_layout(hovermode='x unified')
+        fig.show()
 
     def show_eval_chart(self, actions, rewards, timestamps):
         fig = plt.figure(2, figsize=self.figure_size)
@@ -250,6 +278,7 @@ class TechTime:
         ax1 = fig.get_axes()[0]
         ax2 = ax1.twinx()
 
+        rewards = [reward/TechTimeState.starting_cash for reward in rewards]
         ax2.plot(timestamps, rewards, color='b', label='reward')
         ax2.set_ylabel(f'Eval Rewards {Decimal(rewards[-1]):.2E}', color='b')
         ax1.plot(timestamps, actions, color='r', label='action')
@@ -281,7 +310,7 @@ class TechTime:
         plt.ylabel(f'Reward (max eval: {Decimal(max(test_rewards)):.2E}, '
                    f'max train: {Decimal(max_training_reward):.2E})', fontsize=13)
         plt.plot(train_rewards, label='Train Reward')
-        plt.plot(test_rewards, label='Test Reward')
+        plt.plot(test_rewards, label='Eval Reward')
         # plt.hlines(REWARD_THRESHOLD, 0, len(test_rewards), color='r')
         plt.legend(loc='upper left')
 

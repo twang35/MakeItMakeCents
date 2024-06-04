@@ -24,6 +24,7 @@ class StonkAction(Enum):
 class TechTimeState:
     context_window = 24
     state_dim = context_window + 0
+    starting_cash = 10000
 
     def __init__(self, state, total_balance, timestamp):
         # context_window (24) latest prices, remaining cash, token balance, total balance
@@ -50,14 +51,13 @@ class TechTimeEnv(gym.Env):
             render_mode: Optional[str] = None,
             verbose: bool = False,
             txn_cost=20,
-            starting_cash=10000,
             granularity=datetime.timedelta(minutes=60),
     ):
         self.token_prices = self.convert_to_hourly_average(token_prices, granularity)
         self.txn_cost = txn_cost
-        self.starting_cash = starting_cash
-        self.remaining_cash = starting_cash
-        self.previous_total_balance = starting_cash
+        self.starting_cash = TechTimeState.starting_cash
+        self.remaining_cash = TechTimeState.starting_cash
+        self.previous_total_balance = TechTimeState.starting_cash
         self.token_balance = 0
 
         self.context_window = TechTimeState.context_window
@@ -276,4 +276,4 @@ class TechTimeEnv(gym.Env):
         fig.update_yaxes(title_text="price", showspikes=True)
         fig.update_layout(hovermode="x unified")
         fig.show()
-        print('done with chart')
+        print('done with initial price chart')
