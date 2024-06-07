@@ -7,16 +7,6 @@ class TestDataTypes:
     easy_horizontal = 'easy_horizontal'
 
 
-# eval reward: 1.82E+16 eval reward
-def tony_policy(state, previous_action):
-    if state[5] > 0 and state[3] > 0.7:
-        # sell all tokens
-        return [-1]
-    elif state[4] > 0 and state[3] < 0.3:
-        # buy all tokens
-        return [1]
-    return previous_action
-
 
 def create_test_data():
     # create_test_data_table()
@@ -52,13 +42,36 @@ def human_policy(state, previous_action):
     return tony_policy(state, previous_action)
 
 
-def chloe_policy(state, previous_action):
-    # to implement
+# version 1: 3.89e16
+#   buy below 0.3
+#   sell above 0.7
+def chloe_and_katelyn_policy(state, previous_action):
+    current_price = state[-1]
+
+    if current_price > 0.7:
+        return [-1]
+    if current_price < 0.3:
+        return [1]
+
     return previous_action
 
 
-def katelyn_policy(state, previous_action):
-    # to implement
+# eval reward: 1.14E+17 eval reward
+def tony_policy(state, previous_action):
+    # catch outliers
+    if state[-1] > 0.75:
+        return [-1]
+    if state[-1] < 0.25:
+        return [1]
+
+    # last high before the dip
+    if state[-3] > 0.58 and state[-1] > 0.65:
+        # sell all tokens
+        return [-1]
+    # last low before the rise
+    elif state[-3] < 0.45 and state[-1] < 0.35:
+        # buy all tokens
+        return [1]
     return previous_action
 
 

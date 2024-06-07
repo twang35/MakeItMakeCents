@@ -5,8 +5,8 @@ from decimal import Decimal
 import matplotlib.pyplot as plt
 
 from ml.create_test_data import TestDataTypes, human_policy
-from td3 import TD3
-from replay_buffer import ReplayBuffer
+from ml.td3 import TD3
+from ml.replay_buffer import ReplayBuffer
 
 from tech_time_env import *
 from database import *
