@@ -1,4 +1,5 @@
 import time
+import timeit
 from time import sleep
 import json
 
@@ -16,23 +17,29 @@ def main():
     # create_known_addresses_table()
     conn = create_connection()
 
-    # read from combinedAllLabels.json
-    f = open('combinedAllLabels.json')
+    # time a write
+    timestamp = datetime.datetime.utcnow()
+    epoch_time = int(timestamp.timestamp())
+    timestamp_string = timestamp.strftime('%Y-%m-%d %H:%M:%S')
 
-    # returns JSON object as
-    # a dictionary
-    data = json.load(f)
+    row = (2, timestamp_string, epoch_time)
 
-    for address, attributes in data.items():
-        name = attributes.get("name")
-        name = name.lower() if name is not None else name
-        if search_term in name or any(search_term in item.lower() for item in attributes.get('labels')):
-            # wallet_address, name_tag, type, description, etherscan_tags
-            row = (address, attributes.get("name"), None, None, json.dumps(attributes.get("labels")))
-            insert_known_addresses(conn, row)
+    start = time.time()
+    insert_block_time(conn, row)
+    print(f'write time: {time.time() - start}')
 
-    # save to grab all known of various exchanges and save them all to the database
-
+    # time a read
+    cursor = conn.cursor()
+    query = f"""
+        SELECT * 
+        FROM block_times
+        WHERE block_number = 2;
+        """
+    start = time.time()
+    cursor.execute(query)
+    result = cursor.fetchall()
+    print(f'read time: {time.time() - start}')
+    print(result)
     print('done')
 
 

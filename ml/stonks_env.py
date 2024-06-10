@@ -27,6 +27,7 @@ class StonksState:
     test_data_state_dim = context_window + 0
     # context_window * 6: 5 percentiles + 1 price
     token_data_state_dim = context_window * 6 + 1
+    starting_cash = 10000
 
     def __init__(self, state, previous_action, total_balance, timestamp):
         # context_window (24) latest prices, remaining cash, token balance, total balance
@@ -57,7 +58,6 @@ class StonksEnv(gym.Env):
             verbose: bool = False,
             txn_cost=20,
             txn_percent=0.4,
-            starting_cash=10000,
             granularity = datetime.timedelta(minutes=60),
     ):
         self.token_prices = self.convert_to_hourly_average(copy.deepcopy(token_prices), granularity)
@@ -68,9 +68,9 @@ class StonksEnv(gym.Env):
             if percentile_volume is not None else percentile_volume
         self.txn_cost = txn_cost
         self.txn_percent = txn_percent
-        self.starting_cash = starting_cash
-        self.remaining_cash = starting_cash
-        self.previous_total_balance = starting_cash
+        self.starting_cash = StonksState.starting_cash
+        self.remaining_cash = self.starting_cash
+        self.previous_total_balance = self.starting_cash
         self.token_balance = 0
         self.previous_action = StonkAction.SELL
 

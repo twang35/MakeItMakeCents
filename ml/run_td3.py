@@ -84,12 +84,12 @@ class TD3Runner:
 
         # training envs. eval_env runs the model on training data
         self.train_env = StonksEnv(training_data, percentile_volume=self.percentile_volume,
-                                   show_price_map=self.eval_only, env_name='training')
+                                   show_price_map=self.eval_only, env_name='Training')
         self.eval_env = StonksEnv(training_data, percentile_volume=self.percentile_volume)
         self.sim_env = StonksEnv(training_data, percentile_volume=self.percentile_volume)
         # validation env that runs the model on validation data that was never explicitly trained on
         self.validation_env = StonksEnv(validation_data, percentile_volume=self.percentile_volume,
-                                        show_price_map=self.eval_only, env_name='validation')
+                                        show_price_map=self.eval_only, env_name='Validation')
 
         self.policy = TD3(state_dim=self.state_dim, action_dim=self.action_dim,
                           hidden_dim_1=self.hidden_dim_1, hidden_dim_2=self.hidden_dim_2,
@@ -137,12 +137,11 @@ class TD3Runner:
 
         replay_buffer = ReplayBuffer(self.state_dim, self.action_dim)
 
-        eval_reward, validation_reward = self.test_policy()
+        eval_reward, validation_reward = self.test_policy(eval_only=self.eval_only)
         if self.eval_only:
             self.test_policy_on_unseen_data()
             # self.test_policy()
             print(f'total training eval reward: {eval_reward} and total validation reward: {validation_reward}')
-            input('hit enter to close graphs')
             return
 
         start = time.time()
@@ -284,9 +283,9 @@ class TD3Runner:
         fig.legend()
         fig.canvas.start_event_loop(0.001)  # this updates the plot and doesn't steal window focus
 
-    def test_policy(self):
-        eval_reward = self.test_policy_on_env(self.eval_env, self.eval_figure_num)
-        validation_reward = self.test_policy_on_env(self.validation_env, self.validation_figure_num)
+    def test_policy(self, eval_only=False):
+        eval_reward = self.test_policy_on_env(self.eval_env, self.eval_figure_num, eval_only=eval_only)
+        validation_reward = self.test_policy_on_env(self.validation_env, self.validation_figure_num, eval_only=eval_only)
         return eval_reward, validation_reward
 
     def test_policy_on_unseen_data(self):
@@ -294,10 +293,10 @@ class TD3Runner:
         price_data = load_structured_prices(cursor, self.token.address, after_timestamp=self.training_data_before)
         unseen_data = TimestampData(price_data.data, price_data.timestamps)
         unseen_data_env = StonksEnv(unseen_data, percentile_volume=self.percentile_volume,
-                                    show_price_map=True, env_name='unseen data')
-        self.test_policy_on_env(unseen_data_env, self.unseen_data_figure_num)
+                                    show_price_map=True, env_name='Test unseen data')
+        self.test_policy_on_env(unseen_data_env, self.unseen_data_figure_num, self.eval_only)
 
-    def test_policy_on_env(self, env, figure_num):
+    def test_policy_on_env(self, env, figure_num, eval_only=False):
         done = False
         state = env.reset()
         total_reward = 1
@@ -316,7 +315,10 @@ class TD3Runner:
             timestamps.append(info['stonks_state'].timestamp)
             done = done or truncated
 
-        self.show_eval_chart(actions, rewards, timestamps, figure_num)
+        if eval_only:
+            self.show_plotly_eval_chart(actions, rewards, timestamps, figure_num)
+        else:
+            self.show_eval_chart(actions, rewards, timestamps, figure_num)
 
         return total_balance
 
@@ -327,7 +329,7 @@ class TD3Runner:
         if figure_num == self.validation_figure_num:
             env_type = 'Validation'
         if figure_num == self.unseen_data_figure_num:
-            env_type = 'Testing unseen data'
+            env_type = 'Test unseen data'
         plt.title(f'{self.model_name} {env_type}')
 
         ax1 = fig.get_axes()[0]
@@ -345,6 +347,23 @@ class TD3Runner:
         # replace this call as it sometimes kills the program with:
         #  "system_error: condition_variable wait failed: Invalid argument"
         fig.canvas.start_event_loop(0.001)  # this updates the plot and doesn't steal window focus
+
+    def show_plotly_eval_chart(self, actions, rewards, timestamps, figure_num):
+        fig = make_subplots()
+        env_type = 'Training'
+        if figure_num == self.validation_figure_num:
+            env_type = 'Validation'
+        if figure_num == self.unseen_data_figure_num:
+            env_type = 'Test unseen data'
+        fig.update_layout(title=dict(text=f'{env_type} results', font=dict(size=25)))
+
+        rewards = [reward/StonksState.starting_cash for reward in rewards]
+
+        fig.add_trace(go.Scatter(x=timestamps, y=rewards, name='total rewards'))
+
+        fig.update_yaxes(title_text=f'reward: {rewards[-1]:.2E}', showspikes=True)
+        fig.update_layout(hovermode='x unified')
+        fig.show()
 
 
 if __name__ == "__main__":
