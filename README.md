@@ -135,7 +135,9 @@ token holders.
   * Unfortunately, my preliminary poking around has not found this to be a useful signal for learning.
 * There should be many more signals that I have yet to try or find.
   * ML-based categories of wallets based on trading activity, holdings, profits, etc.
-  * Percentiles based on total value of wallet, total volume of wallet, 
+  * Percentiles based on total value of wallet, total volume of wallet. 
+  * Trailing 24hr moving average price, 3-day avg, etc.
+  * Trailing average volume?
 
 ### Ensemble-based confidence intervals
 
