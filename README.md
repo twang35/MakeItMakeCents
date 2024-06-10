@@ -4,8 +4,6 @@ We do these things not because they are easy, but because we thought they were g
 
 This is an attempt at using AI to help speculate on crypto.
 
-Need to rename: Make it make cents, Coin-cidence? ok ya maybe, Cryp-go-up, 
-
 ## Data Pipeline
 
 * **Ankr**: web3 API that contains vanilla ethereum blockchain data like block times, transaction logs, etc
