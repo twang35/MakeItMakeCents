@@ -1,3 +1,4 @@
 /*.db/
+# I tried to add the database to git and it froze because it was 2GB. Don't do that
 test.db
 transpose_key.txt
