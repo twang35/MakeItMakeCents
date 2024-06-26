@@ -25,13 +25,13 @@ sequenceDiagram
     
     rect rgb(191, 223, 255)
     note right of update.py: process blocks for mined timestamp
-    update.py->>queue: add all blocks from 12700000 to 13300000
+    update.py->>queue: add all blocks from 12700001 to 13300000
     update.py->>queue: get block
-    queue->>update.py: block 12700000
-    update.py->>Ankr: get block metadata for 12700000
+    queue->>update.py: block 12700001
+    update.py->>Ankr: get block metadata for 12700001
     Ankr->>update.py: epoch time: 1624579680
-    update.py->>database: write block 12700000: epoch time 1624579680
-    update.py->>queue: block 12700000 completed
+    update.py->>database: write block 12700001: epoch time 1624579680
+    update.py->>queue: block 12700001 completed
     update.py-->>update.py: process all blocks from queue
     end
     
