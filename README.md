@@ -46,6 +46,7 @@ sequenceDiagram
 * fault-tolerant processing queue:
   * network errors will lead to the processing of a block failing
   * this block will then get picked up and retried by the next worker
+  * processing can be scaled by running additional workers on the same queue
   * the update.py process can be shut down and restart safely with no data loss
 * local database:
   * ~1ms write times, sub-1ms read times
