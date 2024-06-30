@@ -1,3 +1,5 @@
+import random
+
 from database import *
 import numpy as np
 
@@ -39,7 +41,7 @@ def save_to_test_data_table(wave, data_type, start_date='2024-01-02 03:00:00'):
 
 def human_policy(state, previous_action):
     # eval reward to beat: 1.82E+16
-    return tony_policy(state, previous_action)
+    return josh_2_policy(state, previous_action)
 
 
 # version 1: 3.89e16
@@ -72,6 +74,48 @@ def tony_policy(state, previous_action):
     elif state[-3] < 0.45 and state[-1] < 0.35:
         # buy all tokens
         return [1]
+    return previous_action
+
+
+# 3.89E+16
+def josh_policy(state, previous_action):
+    current_price = state[-1]
+
+    # sell when between .7 and .8
+    if current_price > 0.7:
+        return [-1]
+
+    # buy when between .3
+    if current_price < .3:
+        return [1]
+
+    return previous_action
+
+
+# 2.17E+10: buy below .4, sell above .6
+# 4.75E+12: buy one after lowest, sell one after highest
+# 1.10E+15: buy 3 after midpoint, sell above .7
+# 2.68E+16: buy 3 after midpoint, sell above .7 and bug fixed
+def josh_2_policy(state, previous_action):
+    current_price = state[-1]
+
+    # 3.89E+16
+
+    # sell when between .7 and .8
+    if current_price > 0.7:
+        return [-1]
+
+    # buy when between .3
+    if current_price < .295:
+        return [1]
+
+    return previous_action
+
+
+RAYQUAZA = None
+
+def peter_policy(state, previous_action):
+    print('hello peter')
     return previous_action
 
 
